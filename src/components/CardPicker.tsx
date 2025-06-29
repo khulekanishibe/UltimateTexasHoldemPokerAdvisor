@@ -6,8 +6,13 @@ export type Card = string;
 // All suits in display order
 const allSuits = ['h', 'd', 's', 'c'] as const;
 
-// All ranks in order (using 10 instead of T for better readability)
-const allRanks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'] as const;
+// Ranks arranged in 3×4 grid pattern (excluding Ace)
+const gridRanks = [
+  ['2', '3', '4'],
+  ['5', '6', '7'], 
+  ['8', '9', '10'],
+  ['J', 'Q', 'K']
+];
 
 /**
  * Convert suit letter to Unicode symbol
@@ -43,16 +48,16 @@ interface CardPickerProps {
 /**
  * CardPicker Component
  * 
- * Renders a 52-card grid organized by suit in vertical columns.
- * Each suit shows cards from 2 to A vertically.
+ * Renders cards in a 3×4 grid pattern with Ace prominently placed at bottom center.
+ * Each suit is displayed in its own section with this layout.
  * Users can select up to 7 cards total (2 hole + 5 community).
  * 
- * Features:
- * - Visual feedback for selected/unselected states
- * - Hover effects and smooth transitions
- * - Mobile-responsive design
- * - Clear All functionality
- * - Accessibility support
+ * Layout per suit:
+ * 2  3  4
+ * 5  6  7
+ * 8  9  10
+ * J  Q  K
+ *    A     (centered at bottom)
  */
 export default function CardPicker({ onSelect, selectedCards = [] }: CardPickerProps) {
   const [selected, setSelected] = useState<Card[]>(selectedCards);
@@ -87,7 +92,7 @@ export default function CardPicker({ onSelect, selectedCards = [] }: CardPickerP
   /**
    * Render individual card button
    */
-  const renderCard = (rank: string, suit: string) => {
+  const renderCard = (rank: string, suit: string, isAce: boolean = false) => {
     const card = `${rank}${suit}`;
     const isSelected = selected.includes(card);
     const isDisabled = selected.length >= 7 && !isSelected;
@@ -98,57 +103,61 @@ export default function CardPicker({ onSelect, selectedCards = [] }: CardPickerP
         onClick={() => toggleCard(card)}
         disabled={isDisabled}
         className={`
-          w-14 h-20 rounded-lg border-2 shadow-sm p-2 text-center font-bold
+          ${isAce ? 'w-16 h-24' : 'w-14 h-20'} rounded-lg border-2 shadow-sm p-2 text-center font-bold
           flex flex-col justify-center items-center
           transition-all duration-200 ease-in-out
-          ${rank === '10' ? 'text-xs' : 'text-sm'}
+          ${rank === '10' ? 'text-xs' : isAce ? 'text-lg' : 'text-sm'}
           ${isSelected 
-            ? 'bg-green-600 text-white border-green-500 shadow-lg scale-105 ring-2 ring-green-300' 
+            ? `${isAce ? 'bg-yellow-600 border-yellow-500 ring-2 ring-yellow-300' : 'bg-green-600 border-green-500 ring-2 ring-green-300'} text-white shadow-lg scale-105` 
             : `bg-white border-gray-300 hover:bg-gray-50 hover:border-gray-400 hover:shadow-md hover:scale-105 ${getSuitColor(suit)}`
           }
           ${isDisabled 
             ? 'opacity-40 cursor-not-allowed hover:scale-100 hover:shadow-sm' 
             : 'cursor-pointer active:scale-95'
           }
+          ${isAce ? 'shadow-lg border-4' : ''}
         `}
         aria-pressed={isSelected}
         aria-label={`${rank} of ${getSuitName(suit)}`}
         title={`${rank}${getSuitSymbol(suit)}`}
       >
-        <span className="leading-none font-bold">{rank}</span>
-        <span className="text-lg leading-none">{getSuitSymbol(suit)}</span>
+        <span className={`leading-none font-bold ${isAce ? 'text-xl' : ''}`}>{rank}</span>
+        <span className={`${isAce ? 'text-2xl' : 'text-lg'} leading-none`}>{getSuitSymbol(suit)}</span>
       </button>
     );
   };
 
   /**
-   * Render suit column with all ranks vertically
+   * Render suit section with 3×4 grid + centered Ace
    */
-  const renderSuitColumn = (suit: string) => (
-    <div key={suit} className="flex flex-col items-center">
+  const renderSuitSection = (suit: string) => (
+    <div key={suit} className="flex flex-col items-center bg-gray-700/30 rounded-xl p-4 border border-gray-600">
       {/* Suit header */}
-      <div className="mb-3 text-center">
-        <div className={`text-2xl ${getSuitColor(suit)} bg-white rounded-full w-10 h-10 flex items-center justify-center shadow-md border-2 border-gray-200 mb-2`}>
+      <div className="mb-4 text-center">
+        <div className={`text-2xl ${getSuitColor(suit)} bg-white rounded-full w-12 h-12 flex items-center justify-center shadow-md border-2 border-gray-200 mb-2`}>
           {getSuitSymbol(suit)}
         </div>
-        <div className="text-xs text-white font-bold uppercase tracking-wider">
+        <div className="text-sm text-white font-bold uppercase tracking-wider">
           {getSuitName(suit)}
         </div>
       </div>
       
-      {/* All ranks for this suit vertically */}
-      <div className="flex flex-col gap-2">
-        {allRanks.map((rank) => (
-          <div key={`${rank}-${suit}`}>
-            {renderCard(rank, suit)}
-          </div>
+      {/* 3×4 Grid */}
+      <div className="grid grid-cols-3 gap-2 mb-4">
+        {gridRanks.flat().map((rank) => (
+          renderCard(rank, suit)
         ))}
+      </div>
+      
+      {/* Centered Ace at bottom */}
+      <div className="flex justify-center">
+        {renderCard('A', suit, true)}
       </div>
     </div>
   );
 
   return (
-    <div className="w-full max-w-5xl mx-auto">
+    <div className="w-full max-w-6xl mx-auto">
       {/* Header with selection count and clear button */}
       <div className="flex justify-between items-center mb-6">
         <div className="text-sm text-gray-300">
@@ -168,10 +177,10 @@ export default function CardPicker({ onSelect, selectedCards = [] }: CardPickerP
         )}
       </div>
       
-      {/* Card grid organized by suits in vertical columns */}
+      {/* Card grid organized by suits in 2×2 layout */}
       <div className="bg-gray-800 rounded-xl p-6 shadow-inner border-2 border-gray-700">
-        <div className="grid grid-cols-4 gap-6 justify-items-center">
-          {allSuits.map(suit => renderSuitColumn(suit))}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {allSuits.map(suit => renderSuitSection(suit))}
         </div>
       </div>
       
@@ -185,6 +194,7 @@ export default function CardPicker({ onSelect, selectedCards = [] }: CardPickerP
               const suit = card.slice(-1);
               const suitSymbol = getSuitSymbol(suit);
               const isHoleCard = index < 2;
+              const isAce = rank === 'A';
               
               return (
                 <div
@@ -195,6 +205,7 @@ export default function CardPicker({ onSelect, selectedCards = [] }: CardPickerP
                       ? 'bg-blue-600 border-blue-400 text-white' 
                       : 'bg-green-600 border-green-400 text-white'
                     }
+                    ${isAce ? 'ring-2 ring-yellow-400' : ''}
                   `}
                 >
                   {rank}{suitSymbol}
