@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useTransition, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Spade as Spades, TrendingUp, Calculator, Target, Zap, Clock } from "lucide-react";
 import CardPicker from "./components/CardPicker";
 import { evaluateHand, formatCards, isPremiumHand } from "./components/HandEvaluator";
@@ -32,7 +32,6 @@ export default function App() {
   });
 
   // UI state
-  const [isPending, startTransition] = useTransition();
   const [isSimulating, setIsSimulating] = useState(false);
   const [fastMode, setFastMode] = useState(true);
   const [simulationError, setSimulationError] = useState<string | null>(null);
@@ -110,13 +109,17 @@ export default function App() {
       stage: gameStage
     });
     
-    // Run simulation asynchronously without startTransition to avoid flickering
+    // Run simulation asynchronously
     const runSimulation = async () => {
       try {
+        console.log(`Starting simulation ${simulationId} with ${selectedCards.length} cards:`, selectedCards);
+        
         const simulationFunction = fastMode ? quickSimulation : monteCarloSimulation;
         const iterations = fastMode ? 300 : 1000;
         
         const result = await simulationFunction(selectedCards, iterations);
+        
+        console.log(`Simulation ${simulationId} completed:`, result);
         
         // Only update if this is still the current simulation
         if (currentSimulationRef.current === simulationId) {
@@ -125,9 +128,12 @@ export default function App() {
           setAdvice(postflopAdvice);
           setSimulationError(null);
           setIsSimulating(false);
+          console.log(`Updated UI for simulation ${simulationId}`);
+        } else {
+          console.log(`Simulation ${simulationId} was superseded, ignoring results`);
         }
       } catch (error) {
-        console.error("Simulation error:", error);
+        console.error(`Simulation ${simulationId} error:`, error);
         
         // Only update if this is still the current simulation
         if (currentSimulationRef.current === simulationId) {
