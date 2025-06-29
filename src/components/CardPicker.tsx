@@ -6,24 +6,31 @@ export type Card = `${'2'|'3'|'4'|'5'|'6'|'7'|'8'|'9'|'T'|'J'|'Q'|'K'|'A'}${'h'|
 const allRanks = ['2','3','4','5','6','7','8','9','T','J','Q','K','A'];
 const allSuits = ['h','d','s','c'];
 
-// Generate complete 52-card deck
-function generateDeck(): Card[] {
-  return allRanks.flatMap(r => allSuits.map(s => `${r}${s}` as Card));
+// Convert suit letter to symbol
+function getSuitSymbol(suit: string): string {
+  switch (suit) {
+    case 'h': return '♥';
+    case 'd': return '♦';
+    case 's': return '♠';
+    case 'c': return '♣';
+    default: return '';
+  }
 }
 
 // Get suit color for visual styling
 function getSuitColor(suit: string): string {
-  return suit === 'h' || suit === 'd' ? 'text-red-400' : 'text-gray-200';
+  return suit === 'h' || suit === 'd' ? 'text-red-600' : 'text-black';
 }
 
-// Convert suit letter to symbol
-function getSuitSymbol(suit: string): string {
-  const symbols = { h: '♥', d: '♦', s: '♠', c: '♣' };
-  return symbols[suit as keyof typeof symbols] || suit;
+// Get suit name for accessibility
+function getSuitName(suit: string): string {
+  const names = { h: 'Hearts', d: 'Diamonds', s: 'Spades', c: 'Clubs' };
+  return names[suit as keyof typeof names] || suit;
 }
 
 /**
- * CardPicker component renders a grid of all 52 cards as clickable buttons.
+ * CardPicker component renders cards organized by suit in 4 columns.
+ * Each column represents one suit with ranks from 2 to A.
  * Users can select/deselect cards up to 7 total (2 hole + 5 community).
  * Calls onSelect callback with current selection array whenever cards change.
  */
@@ -61,38 +68,60 @@ export default function CardPicker({ onSelect }: CardPickerProps) {
         </p>
       </div>
       
-      <div className="grid grid-cols-13 gap-1 p-4 bg-gray-800 rounded-lg">
-        {generateDeck().map(card => {
-          const rank = card[0];
-          const suit = card[1];
-          const isSelected = selected.includes(card);
-          
-          return (
-            <button
-              key={card}
-              className={`
-                aspect-[2/3] p-1 border rounded-md font-mono text-xs font-bold
-                transition-all duration-200 transform hover:scale-105
-                ${isSelected 
-                  ? "bg-green-600 border-green-400 text-white shadow-lg" 
-                  : "bg-gray-700 border-gray-600 hover:bg-gray-600 hover:border-gray-500"
-                }
-                ${getSuitColor(suit)}
-              `}
-              onClick={() => toggleCard(card)}
-              disabled={selected.length >= 7 && !isSelected}
-              aria-pressed={isSelected}
-              title={`${rank}${getSuitSymbol(suit)}`}
-            >
-              <div className="flex flex-col items-center justify-center h-full">
-                <span className="text-xs">{rank}</span>
-                <span className="text-lg leading-none">{getSuitSymbol(suit)}</span>
+      {/* Scrollable container for mobile */}
+      <div className="overflow-x-auto pb-4">
+        <div className="grid grid-cols-4 gap-4 min-w-[320px] p-4 bg-gray-800 rounded-lg">
+          {allSuits.map(suit => (
+            <div key={suit} className="flex flex-col items-center gap-1">
+              {/* Suit header */}
+              <div className="mb-2 text-center">
+                <div className={`text-2xl ${getSuitColor(suit)}`}>
+                  {getSuitSymbol(suit)}
+                </div>
+                <div className="text-xs text-gray-400 font-medium">
+                  {getSuitName(suit)}
+                </div>
               </div>
-            </button>
-          );
-        })}
+              
+              {/* Cards in this suit */}
+              {allRanks.map(rank => {
+                const card = `${rank}${suit}` as Card;
+                const isSelected = selected.includes(card);
+                const isDisabled = selected.length >= 7 && !isSelected;
+                
+                return (
+                  <button
+                    key={card}
+                    onClick={() => toggleCard(card)}
+                    disabled={isDisabled}
+                    className={`
+                      w-14 h-20 rounded border-2 text-lg font-bold 
+                      flex flex-col justify-center items-center
+                      transition-all duration-200 transform hover:scale-105
+                      ${isSelected 
+                        ? `bg-white ring-4 ring-green-500 shadow-lg ${getSuitColor(suit)}` 
+                        : `bg-white hover:bg-gray-100 border-gray-300 ${getSuitColor(suit)}`
+                      }
+                      ${isDisabled 
+                        ? 'opacity-50 cursor-not-allowed hover:scale-100' 
+                        : 'hover:shadow-md cursor-pointer'
+                      }
+                    `}
+                    aria-pressed={isSelected}
+                    aria-label={`${rank} of ${getSuitName(suit)}`}
+                    title={`${rank}${getSuitSymbol(suit)}`}
+                  >
+                    <span className="text-sm leading-none">{rank}</span>
+                    <span className="text-xl leading-none">{getSuitSymbol(suit)}</span>
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+        </div>
       </div>
       
+      {/* Selected cards display */}
       {selected.length > 0 && (
         <div className="mt-4 p-3 bg-gray-800 rounded-lg">
           <p className="text-sm font-medium text-gray-300 mb-2">Selected Cards:</p>
@@ -101,14 +130,21 @@ export default function CardPicker({ onSelect }: CardPickerProps) {
               <span 
                 key={card}
                 className={`
-                  px-2 py-1 rounded text-sm font-mono font-bold
-                  ${index < 2 ? 'bg-blue-600' : 'bg-green-600'}
-                  ${getSuitColor(card[1])}
+                  px-3 py-1 rounded text-sm font-bold border-2
+                  ${index < 2 
+                    ? 'bg-blue-600 border-blue-400 text-white' 
+                    : 'bg-green-600 border-green-400 text-white'
+                  }
+                  ${getSuitColor(card[1]) === 'text-red-600' ? 'text-red-200' : 'text-white'}
                 `}
               >
                 {card[0]}{getSuitSymbol(card[1])}
               </span>
             ))}
+          </div>
+          <div className="mt-2 text-xs text-gray-500">
+            <span className="text-blue-400">■</span> Hole Cards • 
+            <span className="text-green-400">■</span> Community Cards
           </div>
         </div>
       )}
