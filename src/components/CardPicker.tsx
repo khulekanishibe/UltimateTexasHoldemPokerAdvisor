@@ -36,9 +36,10 @@ function getSuitName(suit: string): string {
  */
 interface CardPickerProps {
   onSelect: (cards: Card[]) => void;
+  onReset: () => void;
 }
 
-export default function CardPicker({ onSelect }: CardPickerProps) {
+export default function CardPicker({ onSelect, onReset }: CardPickerProps) {
   const [selected, setSelected] = useState<Card[]>([]);
 
   const toggleCard = (card: Card) => {
@@ -57,8 +58,14 @@ export default function CardPicker({ onSelect }: CardPickerProps) {
     onSelect(newSelection);
   };
 
+  const handleReset = () => {
+    setSelected([]);
+    onSelect([]);
+    onReset();
+  };
+
   return (
-    <div className="w-full max-w-4xl mx-auto">
+    <div className="w-full max-w-3xl mx-auto px-4">
       <div className="mb-4 text-center">
         <p className="text-sm text-gray-400">
           Select cards: {selected.length}/7 
@@ -73,17 +80,17 @@ export default function CardPicker({ onSelect }: CardPickerProps) {
         <div className="grid grid-cols-4 gap-4 min-w-[320px] p-4 bg-gray-800 rounded-lg">
           {allSuits.map(suit => (
             <div key={suit} className="flex flex-col items-center gap-1">
-              {/* Suit header */}
-              <div className="mb-2 text-center">
-                <div className={`text-2xl ${getSuitColor(suit)}`}>
+              {/* Suit header with larger, more prominent styling */}
+              <div className="mb-3 text-center">
+                <div className={`text-3xl ${getSuitColor(suit)} bg-white rounded-full w-12 h-12 flex items-center justify-center shadow-md`}>
                   {getSuitSymbol(suit)}
                 </div>
-                <div className="text-xs text-gray-400 font-medium">
+                <div className="text-xs text-gray-300 font-medium mt-1">
                   {getSuitName(suit)}
                 </div>
               </div>
               
-              {/* Cards in this suit */}
+              {/* Cards in this suit - larger, more mobile-friendly */}
               {allRanks.map(rank => {
                 const card = `${rank}${suit}` as Card;
                 const isSelected = selected.includes(card);
@@ -95,16 +102,16 @@ export default function CardPicker({ onSelect }: CardPickerProps) {
                     onClick={() => toggleCard(card)}
                     disabled={isDisabled}
                     className={`
-                      w-14 h-20 rounded border-2 text-lg font-bold 
+                      w-16 h-20 rounded-lg border-2 text-base font-bold p-3
                       flex flex-col justify-center items-center
-                      transition-all duration-200 transform hover:scale-105
+                      transition-all duration-200 transform hover:scale-105 hover:shadow-md
                       ${isSelected 
-                        ? `bg-white ring-4 ring-green-500 shadow-lg ${getSuitColor(suit)}` 
-                        : `bg-white hover:bg-gray-100 border-gray-300 ${getSuitColor(suit)}`
+                        ? `bg-green-600 text-white border-2 border-green-800 shadow-lg` 
+                        : `bg-white border-gray-400 hover:bg-gray-50 ${getSuitColor(suit)}`
                       }
                       ${isDisabled 
-                        ? 'opacity-50 cursor-not-allowed hover:scale-100' 
-                        : 'hover:shadow-md cursor-pointer'
+                        ? 'opacity-50 cursor-not-allowed hover:scale-100 hover:shadow-none' 
+                        : 'cursor-pointer'
                       }
                     `}
                     aria-pressed={isSelected}
@@ -121,11 +128,22 @@ export default function CardPicker({ onSelect }: CardPickerProps) {
         </div>
       </div>
       
+      {/* Reset button */}
+      <div className="text-center mt-4">
+        <button
+          onClick={handleReset}
+          className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition-colors duration-200 font-medium"
+          disabled={selected.length === 0}
+        >
+          Reset Hand
+        </button>
+      </div>
+      
       {/* Selected cards display */}
       {selected.length > 0 && (
         <div className="mt-4 p-3 bg-gray-800 rounded-lg">
           <p className="text-sm font-medium text-gray-300 mb-2">Selected Cards:</p>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap justify-center gap-2">
             {selected.map((card, index) => (
               <span 
                 key={card}
@@ -135,14 +153,13 @@ export default function CardPicker({ onSelect }: CardPickerProps) {
                     ? 'bg-blue-600 border-blue-400 text-white' 
                     : 'bg-green-600 border-green-400 text-white'
                   }
-                  ${getSuitColor(card[1]) === 'text-red-600' ? 'text-red-200' : 'text-white'}
                 `}
               >
                 {card[0]}{getSuitSymbol(card[1])}
               </span>
             ))}
           </div>
-          <div className="mt-2 text-xs text-gray-500">
+          <div className="mt-2 text-xs text-gray-500 text-center">
             <span className="text-blue-400">■</span> Hole Cards • 
             <span className="text-green-400">■</span> Community Cards
           </div>

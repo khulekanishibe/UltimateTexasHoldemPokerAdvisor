@@ -24,6 +24,25 @@ export default function App() {
       ? "Select community cards to evaluate hand"
       : "Select hole cards first";
 
+  // Get tip message based on current state
+  const getTipMessage = (): string => {
+    if (selectedCards.length === 0) {
+      return "Tip: Start by selecting your 2 hole cards.";
+    } else if (selectedCards.length === 2) {
+      return "Tip: You've selected your hole cards. Now add Flop cards (3 cards).";
+    } else if (selectedCards.length >= 5) {
+      return "Tip: Full board detected. Monte Carlo simulation will now run.";
+    } else {
+      return "Tip: Add more community cards to complete the board.";
+    }
+  };
+
+  // Reset function to clear all state
+  const handleReset = () => {
+    setSimulationResult(null);
+    setAdvice("Select your 2 hole cards to begin");
+  };
+
   // Update advice and run simulation when cards change
   useEffect(() => {
     if (selectedCards.length < 2) {
@@ -98,14 +117,21 @@ export default function App() {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-6 space-y-6">
+      {/* Sticky Tip Bar */}
+      <div className="bg-yellow-100 text-yellow-800 text-sm rounded p-2 mb-4 shadow mx-4 mt-4">
+        <div className="max-w-3xl mx-auto text-center font-medium">
+          {getTipMessage()}
+        </div>
+      </div>
+
+      <div className="container mx-auto px-4 py-6 space-y-6 max-w-6xl">
         {/* Card Picker */}
         <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
           <div className="flex items-center gap-2 mb-4">
             <Calculator className="h-5 w-5 text-green-400" />
             <h2 className="text-xl font-semibold">Select Your Cards</h2>
           </div>
-          <CardPicker onSelect={setSelectedCards} />
+          <CardPicker onSelect={setSelectedCards} onReset={handleReset} />
         </div>
 
         {/* Results Panel */}
