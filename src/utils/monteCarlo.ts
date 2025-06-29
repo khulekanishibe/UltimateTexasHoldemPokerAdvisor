@@ -1,5 +1,4 @@
 import { Hand } from "pokersolver";
-import type { Card } from "../components/CardPicker";
 
 /**
  * Monte Carlo Simulation Module for Ultimate Texas Hold'em
@@ -9,7 +8,7 @@ import type { Card } from "../components/CardPicker";
  */
 
 // All possible ranks and suits for deck generation
-const allRanks = ['2','3','4','5','6','7','8','9','T','J','Q','K','A'] as const;
+const allRanks = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'] as const;
 const allSuits = ['h','d','s','c'] as const;
 
 /**
@@ -23,12 +22,19 @@ export interface SimulationResult {
 }
 
 /**
+ * Convert card format from "10h" to "Th" for pokersolver compatibility
+ */
+function convertCardForSolver(card: string): string {
+  return card.replace('10', 'T');
+}
+
+/**
  * Generate complete 52-card deck
  * 
  * @returns Array of all 52 cards
  */
-function generateDeck(): Card[] {
-  return allRanks.flatMap(r => allSuits.map(s => `${r}${s}` as Card));
+function generateDeck(): string[] {
+  return allRanks.flatMap(r => allSuits.map(s => `${r}${s}`));
 }
 
 /**
@@ -64,7 +70,7 @@ function shuffleArray<T>(array: T[]): T[] {
  * @returns Promise resolving to simulation results
  */
 export async function monteCarloSimulation(
-  knownCards: Card[],
+  knownCards: string[],
   iterations: number = 1000
 ): Promise<SimulationResult> {
   
@@ -113,9 +119,13 @@ export async function monteCarloSimulation(
       const playerCards = [...playerHole, ...fullCommunity];
       const dealerCards = [...dealerHole, ...fullCommunity];
       
+      // Convert cards to pokersolver format (10 -> T)
+      const playerSolverCards = playerCards.map(convertCardForSolver);
+      const dealerSolverCards = dealerCards.map(convertCardForSolver);
+      
       // Evaluate hands using pokersolver
-      const playerHand = Hand.solve(playerCards);
-      const dealerHand = Hand.solve(dealerCards);
+      const playerHand = Hand.solve(playerSolverCards);
+      const dealerHand = Hand.solve(dealerSolverCards);
       
       // Determine winner
       const winners = Hand.winners([playerHand, dealerHand]);
@@ -161,19 +171,9 @@ export async function monteCarloSimulation(
  * Useful for real-time updates during card selection.
  * 
  * @param knownCards Array of known cards
+ * @param iterations Number of iterations (default: 300)
  * @returns Promise resolving to simulation results
  */
-export async function quickSimulation(knownCards: Card[]): Promise<SimulationResult> {
-  return monteCarloSimulation(knownCards, 300);
-}
-
-/**
- * Detailed simulation with more iterations for accurate results.
- * Use when precision is more important than speed.
- * 
- * @param knownCards Array of known cards
- * @returns Promise resolving to simulation results
- */
-export async function detailedSimulation(knownCards: Card[]): Promise<SimulationResult> {
-  return monteCarloSimulation(knownCards, 1000);
+export async function quickSimulation(knownCards: string[], iterations: number = 300): Promise<SimulationResult> {
+  return monteCarloSimulation(knownCards, iterations);
 }

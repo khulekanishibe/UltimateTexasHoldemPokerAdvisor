@@ -7,8 +7,6 @@
  * - Game stage and betting rules
  */
 
-import type { Card } from './CardPicker';
-
 /**
  * Game stages in Ultimate Texas Hold'em
  */
@@ -35,7 +33,7 @@ export interface BettingAdvice {
  * @param holeCards Array of exactly 2 hole cards
  * @returns Betting advice object
  */
-export function getPreflopAdvice(holeCards: Card[]): BettingAdvice {
+export function getPreflopAdvice(holeCards: string[]): BettingAdvice {
   if (holeCards.length !== 2) {
     return {
       action: "Select exactly 2 hole cards",
@@ -46,14 +44,14 @@ export function getPreflopAdvice(holeCards: Card[]): BettingAdvice {
   }
 
   const [card1, card2] = holeCards;
-  const rank1 = card1[0];
-  const suit1 = card1[1];
-  const rank2 = card2[0];
-  const suit2 = card2[1];
+  const rank1 = card1.slice(0, -1);
+  const suit1 = card1.slice(-1);
+  const rank2 = card2.slice(0, -1);
+  const suit2 = card2.slice(-1);
 
   const suited = suit1 === suit2;
   const ranks = [rank1, rank2].sort();
-  const strongRanks = ['A', 'K', 'Q', 'J', 'T'];
+  const strongRanks = ['A', 'K', 'Q', 'J', '10'];
   const isPair = rank1 === rank2;
 
   // Pocket Aces - Premium hand
@@ -71,7 +69,7 @@ export function getPreflopAdvice(holeCards: Card[]): BettingAdvice {
     const pairName = rank1 === 'K' ? 'Kings' : 
                     rank1 === 'Q' ? 'Queens' : 
                     rank1 === 'J' ? 'Jacks' : 
-                    rank1 === 'T' ? 'Tens' : `${rank1}s`;
+                    rank1 === '10' ? 'Tens' : `${rank1}s`;
     return {
       action: "4x Bet (Pair)",
       confidence: 'high',
@@ -90,7 +88,7 @@ export function getPreflopAdvice(holeCards: Card[]): BettingAdvice {
     };
   }
 
-  // Both cards are Broadway (T, J, Q, K, A)
+  // Both cards are Broadway (10, J, Q, K, A)
   if (strongRanks.includes(rank1) && strongRanks.includes(rank2)) {
     if (suited) {
       return {
@@ -121,7 +119,7 @@ export function getPreflopAdvice(holeCards: Card[]): BettingAdvice {
   // K-x suited or Q-x suited (decent kicker)
   if (((rank1 === 'K' || rank2 === 'K') || (rank1 === 'Q' || rank2 === 'Q')) && suited) {
     const otherRank = rank1 === 'K' || rank1 === 'Q' ? rank2 : rank1;
-    const rankOrder = ['2','3','4','5','6','7','8','9','T','J','Q','K','A'];
+    const rankOrder = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
     if (rankOrder.indexOf(otherRank) >= 4) { // 6 or better
       return {
         action: "2x Bet (Playable)",

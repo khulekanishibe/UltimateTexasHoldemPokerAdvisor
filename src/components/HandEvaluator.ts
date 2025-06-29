@@ -8,9 +8,16 @@ import { Hand } from "pokersolver";
  */
 
 /**
+ * Convert card format from "10h" to "Th" for pokersolver compatibility
+ */
+function convertCardForSolver(card: string): string {
+  return card.replace('10', 'T');
+}
+
+/**
  * Evaluates the best 5-card poker hand from given cards using pokersolver library.
  * 
- * @param cards Array of card strings (e.g., ['Ah','Kd','Qs','Jc','Ts'])
+ * @param cards Array of card strings (e.g., ['Ah','Kd','Qs','Jc','10s'])
  * @returns Hand description string like "Straight", "Two Pair", "Full House", etc.
  */
 export function evaluateHand(cards: string[]): string {
@@ -19,8 +26,9 @@ export function evaluateHand(cards: string[]): string {
   }
   
   try {
-    // pokersolver expects cards in format like "Ah", "Kd", etc.
-    const result = Hand.solve(cards);
+    // Convert cards to pokersolver format (10 -> T)
+    const solverCards = cards.map(convertCardForSolver);
+    const result = Hand.solve(solverCards);
     return result.descr || "Unknown hand";
   } catch (error) {
     console.error("Error evaluating hand:", error);
@@ -51,7 +59,8 @@ export function getHandRank(cards: string[]): number {
   if (cards.length < 5) return 0;
   
   try {
-    const result = Hand.solve(cards);
+    const solverCards = cards.map(convertCardForSolver);
+    const result = Hand.solve(solverCards);
     return result.rank || 0;
   } catch (error) {
     console.error("Error getting hand rank:", error);
@@ -61,7 +70,6 @@ export function getHandRank(cards: string[]): number {
 
 /**
  * Formats card array for display with suit symbols and proper rank display.
- * Converts 'T' to '10' for better readability.
  * 
  * @param cards Array of card strings
  * @returns Formatted string with suit symbols
@@ -70,8 +78,8 @@ export function formatCards(cards: string[]): string {
   const suitSymbols = { h: '♥', d: '♦', s: '♠', c: '♣' };
   
   return cards.map(card => {
-    const rank = card[0] === 'T' ? '10' : card[0]; // Convert T to 10 for display
-    const suit = card[1];
+    const rank = card.slice(0, -1);
+    const suit = card.slice(-1);
     const symbol = suitSymbols[suit as keyof typeof suitSymbols] || suit;
     return `${rank}${symbol}`;
   }).join(' ');
@@ -87,14 +95,14 @@ export function isPremiumHand(holeCards: string[]): boolean {
   if (holeCards.length !== 2) return false;
   
   const [card1, card2] = holeCards;
-  const rank1 = card1[0];
-  const suit1 = card1[1];
-  const rank2 = card2[0];
-  const suit2 = card2[1];
+  const rank1 = card1.slice(0, -1);
+  const suit1 = card1.slice(-1);
+  const rank2 = card2.slice(0, -1);
+  const suit2 = card2.slice(-1);
   
   const suited = suit1 === suit2;
   const isPair = rank1 === rank2;
-  const strongRanks = ['A', 'K', 'Q', 'J', 'T'];
+  const strongRanks = ['A', 'K', 'Q', 'J', '10'];
   
   // Any pair is premium
   if (isPair) return true;

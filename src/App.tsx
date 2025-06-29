@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useTransition } from "react";
 import { Spade as Spades, TrendingUp, Calculator, Target, Zap, Clock } from "lucide-react";
-import CardPicker, { Card } from "./components/CardPicker";
+import CardPicker from "./components/CardPicker";
 import { evaluateHand, formatCards, isPremiumHand } from "./components/HandEvaluator";
 import { 
   getPreflopAdvice, 
@@ -22,7 +22,7 @@ import { monteCarloSimulation, quickSimulation, type SimulationResult } from "./
  */
 export default function App() {
   // Core state
-  const [selectedCards, setSelectedCards] = useState<Card[]>([]);
+  const [selectedCards, setSelectedCards] = useState<string[]>([]);
   const [simulationResult, setSimulationResult] = useState<SimulationResult | null>(null);
   const [advice, setAdvice] = useState<BettingAdvice>({
     action: "Select your 2 hole cards to begin",
@@ -207,7 +207,7 @@ export default function App() {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 py-4 space-y-6">
+      <div className="max-w-5xl mx-auto px-4 py-4 space-y-6">
         {/* Betting Advice - Top Priority */}
         <div className="bg-gray-800/90 backdrop-blur-sm rounded-xl p-6 border border-gray-700 shadow-xl">
           <h2 className="text-xl font-bold mb-4 flex items-center gap-3">
@@ -413,7 +413,7 @@ export default function App() {
           <div className="text-center">
             <button
               onClick={handleReset}
-              className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200"
+              className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200 shadow-lg hover:shadow-xl"
             >
               Reset Hand
             </button>
