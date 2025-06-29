@@ -1,15 +1,44 @@
 import { Hand } from "pokersolver";
-import { Card } from "../components/CardPicker";
+import type { Card } from "../components/CardPicker";
 
-const allRanks = ['2','3','4','5','6','7','8','9','T','J','Q','K','A'];
-const allSuits = ['h','d','s','c'];
+/**
+ * Monte Carlo Simulation Module for Ultimate Texas Hold'em
+ * 
+ * Runs statistical simulations to calculate win/tie/lose probabilities
+ * by generating thousands of random scenarios and comparing final hands.
+ */
 
-// Generate complete 52-card deck
+// All possible ranks and suits for deck generation
+const allRanks = ['2','3','4','5','6','7','8','9','T','J','Q','K','A'] as const;
+const allSuits = ['h','d','s','c'] as const;
+
+/**
+ * Monte Carlo simulation result interface
+ */
+export interface SimulationResult {
+  win: number;
+  tie: number;
+  lose: number;
+  iterations: number;
+  confidence: number;
+}
+
+/**
+ * Generate complete 52-card deck
+ * 
+ * @returns Array of all 52 cards
+ */
 function generateDeck(): Card[] {
   return allRanks.flatMap(r => allSuits.map(s => `${r}${s}` as Card));
 }
 
-// Fisher-Yates shuffle algorithm for array randomization
+/**
+ * Fisher-Yates shuffle algorithm for array randomization
+ * Ensures uniform distribution of random outcomes
+ * 
+ * @param array Array to shuffle
+ * @returns New shuffled array
+ */
 function shuffleArray<T>(array: T[]): T[] {
   const shuffled = [...array];
   for (let i = shuffled.length - 1; i > 0; i--) {
@@ -20,8 +49,22 @@ function shuffleArray<T>(array: T[]): T[] {
 }
 
 /**
- * Monte Carlo simulation for Ultimate Texas Hold'em.
- * Simulates multiple random scenarios to calculate win/tie/lose probabilities.
+ * Calculate confidence level based on number of iterations
+ * More iterations = higher confidence in results
+ * 
+ * @param iterations Number of simulation iterations
+ * @returns Confidence percentage (0-100)
+ */
+function calculateConfidence(iterations: number): number {
+  if (iterations >= 2000) return 95;
+  if (iterations >= 1000) return 90;
+  if (iterations >= 500) return 85;
+  if (iterations >= 250) return 80;
+  return 75;
+}
+
+/**
+ * Main Monte Carlo simulation for Ultimate Texas Hold'em.
  * 
  * Process:
  * 1. Remove known cards from deck
@@ -34,12 +77,12 @@ function shuffleArray<T>(array: T[]): T[] {
  * 
  * @param knownCards Array of known cards (player hole + community)
  * @param iterations Number of simulations to run (default: 1000)
- * @returns Promise resolving to win/tie/lose percentages
+ * @returns Promise resolving to simulation results
  */
 export async function monteCarloSimulation(
   knownCards: Card[],
   iterations: number = 1000
-): Promise<{ win: number; tie: number; lose: number }> {
+): Promise<SimulationResult> {
   
   // Validate input
   if (knownCards.length < 2) {
@@ -53,9 +96,14 @@ export async function monteCarloSimulation(
   // Create deck without known cards
   const remainingDeck = generateDeck().filter(card => !knownCards.includes(card));
   
+  if (remainingDeck.length < 7) {
+    throw new Error("Not enough cards remaining in deck");
+  }
+
   let wins = 0;
   let ties = 0;
   let losses = 0;
+  let validIterations = 0;
 
   // Run Monte Carlo iterations
   for (let i = 0; i < iterations; i++) {
@@ -99,24 +147,30 @@ export async function monteCarloSimulation(
         losses++;
       }
       
+      validIterations++;
+      
     } catch (error) {
-      console.error(`Error in Monte Carlo iteration ${i}:`, error);
-      // Skip this iteration on error
+      console.warn(`Error in Monte Carlo iteration ${i}:`, error);
+      // Skip this iteration on error but continue
       continue;
     }
   }
 
-  // Calculate percentages
-  const total = wins + ties + losses;
-  
-  if (total === 0) {
+  // Ensure we have valid results
+  if (validIterations === 0) {
     throw new Error("No valid iterations completed");
   }
+
+  // Calculate percentages
+  const total = validIterations;
+  const confidence = calculateConfidence(validIterations);
 
   return {
     win: (wins / total) * 100,
     tie: (ties / total) * 100,
-    lose: (losses / total) * 100
+    lose: (losses / total) * 100,
+    iterations: validIterations,
+    confidence
   };
 }
 
@@ -125,9 +179,9 @@ export async function monteCarloSimulation(
  * Useful for real-time updates during card selection.
  * 
  * @param knownCards Array of known cards
- * @returns Promise resolving to win/tie/lose percentages
+ * @returns Promise resolving to simulation results
  */
-export async function quickSimulation(knownCards: Card[]): Promise<{ win: number; tie: number; lose: number }> {
+export async function quickSimulation(knownCards: Card[]): Promise<SimulationResult> {
   return monteCarloSimulation(knownCards, 500);
 }
 
@@ -136,8 +190,82 @@ export async function quickSimulation(knownCards: Card[]): Promise<{ win: number
  * Use when precision is more important than speed.
  * 
  * @param knownCards Array of known cards
- * @returns Promise resolving to win/tie/lose percentages
+ * @returns Promise resolving to simulation results
  */
-export async function detailedSimulation(knownCards: Card[]): Promise<{ win: number; tie: number; lose: number }> {
+export async function detailedSimulation(knownCards: Card[]): Promise<SimulationResult> {
   return monteCarloSimulation(knownCards, 2000);
+}
+
+/**
+ * Batch simulation runner that yields intermediate results
+ * Useful for showing progress during long simulations
+ * 
+ * @param knownCards Array of known cards
+ * @param totalIterations Total iterations to run
+ * @param batchSize Number of iterations per batch
+ * @param onProgress Callback for intermediate results
+ * @returns Promise resolving to final simulation results
+ */
+export async function batchSimulation(
+  knownCards: Card[],
+  totalIterations: number = 2000,
+  batchSize: number = 250,
+  onProgress?: (result: SimulationResult, progress: number) => void
+): Promise<SimulationResult> {
+  
+  let totalWins = 0;
+  let totalTies = 0;
+  let totalLosses = 0;
+  let totalValidIterations = 0;
+  
+  const batches = Math.ceil(totalIterations / batchSize);
+  
+  for (let batch = 0; batch < batches; batch++) {
+    const iterationsThisBatch = Math.min(batchSize, totalIterations - (batch * batchSize));
+    
+    try {
+      const batchResult = await monteCarloSimulation(knownCards, iterationsThisBatch);
+      
+      // Accumulate results
+      const batchWins = (batchResult.win / 100) * batchResult.iterations;
+      const batchTies = (batchResult.tie / 100) * batchResult.iterations;
+      const batchLosses = (batchResult.lose / 100) * batchResult.iterations;
+      
+      totalWins += batchWins;
+      totalTies += batchTies;
+      totalLosses += batchLosses;
+      totalValidIterations += batchResult.iterations;
+      
+      // Calculate current overall percentages
+      const currentResult: SimulationResult = {
+        win: (totalWins / totalValidIterations) * 100,
+        tie: (totalTies / totalValidIterations) * 100,
+        lose: (totalLosses / totalValidIterations) * 100,
+        iterations: totalValidIterations,
+        confidence: calculateConfidence(totalValidIterations)
+      };
+      
+      // Report progress
+      if (onProgress) {
+        const progress = ((batch + 1) / batches) * 100;
+        onProgress(currentResult, progress);
+      }
+      
+    } catch (error) {
+      console.error(`Error in batch ${batch}:`, error);
+      continue;
+    }
+  }
+  
+  if (totalValidIterations === 0) {
+    throw new Error("No valid iterations completed in batch simulation");
+  }
+  
+  return {
+    win: (totalWins / totalValidIterations) * 100,
+    tie: (totalTies / totalValidIterations) * 100,
+    lose: (totalLosses / totalValidIterations) * 100,
+    iterations: totalValidIterations,
+    confidence: calculateConfidence(totalValidIterations)
+  };
 }

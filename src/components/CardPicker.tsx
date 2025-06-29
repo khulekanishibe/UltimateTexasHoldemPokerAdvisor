@@ -1,59 +1,72 @@
 import React, { useState } from "react";
 
-// Card type definition: rank + suit (e.g., "Ah", "Kd", "Qs")
+// Card type definition: rank + suit (e.g., "Ah", "Kd", "Qs", "Tc")
 export type Card = `${'2'|'3'|'4'|'5'|'6'|'7'|'8'|'9'|'T'|'J'|'Q'|'K'|'A'}${'h'|'d'|'s'|'c'}`;
 
-const allSuits = ['h','d','s','c'];
+// All suits in display order
+const allSuits = ['h', 'd', 's', 'c'] as const;
 
-// Organize ranks in 3x4 grid + Ace at bottom center
-const rankLayout = [
-  ['2', '3', '4'],    // Row 1
-  ['5', '6', '7'],    // Row 2  
-  ['8', '9', 'T'],    // Row 3
-  ['J', 'Q', 'K'],    // Row 4
-  // Ace will be positioned separately at bottom center
-];
+// All ranks in ascending order
+const allRanks = ['2','3','4','5','6','7','8','9','T','J','Q','K','A'] as const;
 
-// Convert rank for display (T becomes 10)
+/**
+ * Convert rank for display (T becomes 10 for better readability)
+ */
 function getDisplayRank(rank: string): string {
   return rank === 'T' ? '10' : rank;
 }
 
-// Convert suit letter to symbol
+/**
+ * Convert suit letter to Unicode symbol
+ */
 function getSuitSymbol(suit: string): string {
-  switch (suit) {
-    case 'h': return '♥';
-    case 'd': return '♦';
-    case 's': return '♠';
-    case 'c': return '♣';
-    default: return '';
-  }
+  const symbols = { h: '♥', d: '♦', s: '♠', c: '♣' };
+  return symbols[suit as keyof typeof symbols] || suit;
 }
 
-// Get suit color for visual styling
+/**
+ * Get suit color for visual styling (red for hearts/diamonds, black for spades/clubs)
+ */
 function getSuitColor(suit: string): string {
   return suit === 'h' || suit === 'd' ? 'text-red-600' : 'text-black';
 }
 
-// Get suit name for accessibility
+/**
+ * Get suit name for accessibility
+ */
 function getSuitName(suit: string): string {
   const names = { h: 'Hearts', d: 'Diamonds', s: 'Spades', c: 'Clubs' };
   return names[suit as keyof typeof names] || suit;
 }
 
 /**
- * CardPicker component renders cards organized by suit in 4 columns.
- * Each suit shows cards in a 3x4 grid with Ace at the bottom center.
- * Users can select/deselect cards up to 7 total (2 hole + 5 community).
+ * CardPicker Props Interface
  */
 interface CardPickerProps {
   onSelect: (cards: Card[]) => void;
-  onReset: () => void;
+  selectedCards?: Card[];
 }
 
-export default function CardPicker({ onSelect, onReset }: CardPickerProps) {
-  const [selected, setSelected] = useState<Card[]>([]);
+/**
+ * CardPicker Component
+ * 
+ * Renders a 52-card grid organized by suit in vertical columns.
+ * Each suit column shows all 13 ranks from 2 to Ace.
+ * Users can select up to 7 cards total (2 hole + 5 community).
+ * 
+ * Features:
+ * - Visual feedback for selected/unselected states
+ * - Hover effects and smooth transitions
+ * - Mobile-responsive design
+ * - Clear All functionality
+ * - Accessibility support
+ */
+export default function CardPicker({ onSelect, selectedCards = [] }: CardPickerProps) {
+  const [selected, setSelected] = useState<Card[]>(selectedCards);
 
+  /**
+   * Toggle card selection state
+   */
   const toggleCard = (card: Card) => {
     let newSelection: Card[];
     
@@ -61,8 +74,8 @@ export default function CardPicker({ onSelect, onReset }: CardPickerProps) {
       // Deselect card
       newSelection = selected.filter(c => c !== card);
     } else {
-      // Select card if under limit
-      if (selected.length >= 7) return; // Max 7 cards (2 hole + 5 community)
+      // Select card if under limit (7 total: 2 hole + 5 community)
+      if (selected.length >= 7) return;
       newSelection = [...selected, card];
     }
     
@@ -70,13 +83,17 @@ export default function CardPicker({ onSelect, onReset }: CardPickerProps) {
     onSelect(newSelection);
   };
 
-  const handleReset = () => {
+  /**
+   * Clear all selected cards
+   */
+  const handleClearAll = () => {
     setSelected([]);
     onSelect([]);
-    onReset();
   };
 
-  // Render individual card button
+  /**
+   * Render individual card button
+   */
   const renderCard = (rank: string, suit: string) => {
     const card = `${rank}${suit}` as Card;
     const isSelected = selected.includes(card);
@@ -89,109 +106,113 @@ export default function CardPicker({ onSelect, onReset }: CardPickerProps) {
         onClick={() => toggleCard(card)}
         disabled={isDisabled}
         className={`
-          w-12 h-12 rounded-lg border shadow-sm p-2 text-center text-lg font-bold
+          w-14 h-20 rounded-lg border-2 shadow-sm p-2 text-center font-bold
           flex flex-col justify-center items-center
-          transition duration-150 ease-in-out hover:shadow-lg hover:scale-105
+          transition-all duration-200 ease-in-out
           ${rank === 'T' ? 'text-sm' : 'text-lg'}
           ${isSelected 
-            ? `bg-green-700 text-white border-green-800 shadow-md scale-105` 
-            : `bg-white border-gray-400 hover:bg-gray-50 ${getSuitColor(suit)}`
+            ? 'bg-green-600 text-white border-green-500 shadow-lg scale-105 ring-2 ring-green-300' 
+            : `bg-white border-gray-300 hover:bg-gray-50 hover:border-gray-400 hover:shadow-md hover:scale-105 ${getSuitColor(suit)}`
           }
           ${isDisabled 
-            ? 'opacity-50 cursor-not-allowed hover:scale-100 hover:shadow-sm' 
-            : 'cursor-pointer'
+            ? 'opacity-40 cursor-not-allowed hover:scale-100 hover:shadow-sm' 
+            : 'cursor-pointer active:scale-95'
           }
         `}
         aria-pressed={isSelected}
         aria-label={`${displayRank} of ${getSuitName(suit)}`}
         title={`${displayRank}${getSuitSymbol(suit)}`}
       >
-        <span className="leading-none">{displayRank}</span>
-        <span className="text-base leading-none">{getSuitSymbol(suit)}</span>
+        <span className="leading-none font-bold">{displayRank}</span>
+        <span className="text-xl leading-none mt-1">{getSuitSymbol(suit)}</span>
       </button>
     );
   };
 
   return (
-    <div className="w-full max-w-3xl mx-auto px-4">
-      <div className="mb-4 text-center">
-        <p className="text-sm text-gray-400">
-          Select cards: {selected.length}/7 
-          {selected.length <= 2 && " (Choose your hole cards first)"}
-          {selected.length > 2 && selected.length <= 5 && " (Add flop cards)"}
-          {selected.length > 5 && " (Add turn/river)"}
-        </p>
+    <div className="w-full max-w-4xl mx-auto">
+      {/* Header with selection count and clear button */}
+      <div className="flex justify-between items-center mb-4">
+        <div className="text-sm text-gray-400">
+          <span className="font-medium">Cards Selected: {selected.length}/7</span>
+          {selected.length <= 2 && <span className="ml-2 text-blue-400">(Choose hole cards first)</span>}
+          {selected.length > 2 && selected.length <= 5 && <span className="ml-2 text-green-400">(Add flop cards)</span>}
+          {selected.length > 5 && <span className="ml-2 text-yellow-400">(Add turn/river)</span>}
+        </div>
+        
+        {selected.length > 0 && (
+          <button
+            onClick={handleClearAll}
+            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors duration-200 text-sm"
+          >
+            Clear All
+          </button>
+        )}
       </div>
       
-      {/* Card grid organized by suits */}
-      <div className="overflow-x-auto pb-4">
-        <div className="flex flex-wrap justify-start gap-1 min-w-[320px] p-4 bg-gray-800 rounded-lg">
+      {/* Card grid organized by suits in vertical columns */}
+      <div className="bg-poker-felt rounded-xl p-6 shadow-inner border-4 border-poker-feltDark">
+        <div className="grid grid-cols-4 gap-4 justify-items-center">
           {allSuits.map(suit => (
-            <div key={suit} className="flex flex-col items-center mb-4 mx-2">
+            <div key={suit} className="flex flex-col items-center">
               {/* Suit header */}
-              <div className="mb-3 text-center">
-                <div className={`text-xl ${getSuitColor(suit)} bg-white rounded-full w-8 h-8 flex items-center justify-center shadow-sm mb-1`}>
+              <div className="mb-4 text-center">
+                <div className={`text-2xl ${getSuitColor(suit)} bg-white rounded-full w-10 h-10 flex items-center justify-center shadow-md border-2 border-gray-200 mb-2`}>
                   {getSuitSymbol(suit)}
                 </div>
-                <div className="text-xs text-gray-300 font-medium">
-                  {getSuitSymbol(suit)}
+                <div className="text-xs text-white font-bold uppercase tracking-wider">
+                  {getSuitName(suit)}
                 </div>
               </div>
               
-              {/* 3x4 Grid of cards (2-K) */}
-              <div className="grid grid-cols-3 gap-1 mb-2">
-                {rankLayout.map((row, rowIndex) => 
-                  row.map((rank) => (
-                    <div key={`${rank}-${suit}`}>
-                      {renderCard(rank, suit)}
-                    </div>
-                  ))
-                )}
-              </div>
-              
-              {/* Ace at bottom center */}
-              <div className="flex justify-center">
-                {renderCard('A', suit)}
+              {/* All 13 cards for this suit */}
+              <div className="grid grid-cols-1 gap-2">
+                {allRanks.map((rank) => (
+                  <div key={`${rank}-${suit}`}>
+                    {renderCard(rank, suit)}
+                  </div>
+                ))}
               </div>
             </div>
           ))}
         </div>
       </div>
       
-      {/* Reset button */}
-      <div className="text-center mt-3">
-        <button
-          onClick={handleReset}
-          className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded mt-3 transition-colors duration-200 font-medium"
-          disabled={selected.length === 0}
-        >
-          Reset Hand
-        </button>
-      </div>
-      
       {/* Selected cards display */}
       {selected.length > 0 && (
-        <div className="mt-4 p-3 bg-gray-800 rounded-lg">
-          <p className="text-sm font-medium text-gray-300 mb-2">Selected Cards:</p>
+        <div className="mt-6 p-4 bg-gray-800 rounded-lg border border-gray-700">
+          <p className="text-sm font-medium text-gray-300 mb-3 text-center">Selected Cards</p>
           <div className="flex flex-wrap justify-center gap-2">
-            {selected.map((card, index) => (
-              <span 
-                key={card}
-                className={`
-                  px-3 py-1 rounded text-sm font-bold border-2
-                  ${index < 2 
-                    ? 'bg-blue-600 border-blue-400 text-white' 
-                    : 'bg-green-600 border-green-400 text-white'
-                  }
-                `}
-              >
-                {getDisplayRank(card[0])}{getSuitSymbol(card[1])}
-              </span>
-            ))}
+            {selected.map((card, index) => {
+              const displayRank = getDisplayRank(card[0]);
+              const suitSymbol = getSuitSymbol(card[1]);
+              const isHoleCard = index < 2;
+              
+              return (
+                <div
+                  key={card}
+                  className={`
+                    px-3 py-2 rounded-lg text-sm font-bold border-2 shadow-sm
+                    ${isHoleCard 
+                      ? 'bg-blue-600 border-blue-400 text-white' 
+                      : 'bg-green-600 border-green-400 text-white'
+                    }
+                  `}
+                >
+                  {displayRank}{suitSymbol}
+                </div>
+              );
+            })}
           </div>
-          <div className="mt-2 text-xs text-gray-500 text-center">
-            <span className="text-blue-400">■</span> Hole Cards • 
-            <span className="text-green-400">■</span> Community Cards
+          <div className="mt-3 text-xs text-gray-400 text-center">
+            <span className="inline-flex items-center mr-4">
+              <span className="w-3 h-3 bg-blue-600 rounded mr-1"></span>
+              Hole Cards
+            </span>
+            <span className="inline-flex items-center">
+              <span className="w-3 h-3 bg-green-600 rounded mr-1"></span>
+              Community Cards
+            </span>
           </div>
         </div>
       )}
