@@ -118,3 +118,46 @@ export function isPremiumHand(holeCards: string[]): boolean {
   
   return false;
 }
+
+/**
+ * Get detailed hand analysis for AI prompts
+ * 
+ * @param cards Array of card strings
+ * @returns Detailed hand analysis object
+ */
+export function getHandAnalysis(cards: string[]) {
+  if (cards.length < 5) {
+    return {
+      handName: "Incomplete hand",
+      handRank: 0,
+      strength: "unknown"
+    };
+  }
+
+  try {
+    const solverCards = cards.map(convertCardForSolver);
+    const result = Hand.solve(solverCards);
+    
+    const handRank = result.rank || 0;
+    let strength = "weak";
+    
+    if (handRank >= 8) strength = "very strong";
+    else if (handRank >= 6) strength = "strong";
+    else if (handRank >= 4) strength = "moderate";
+    else if (handRank >= 2) strength = "weak";
+    
+    return {
+      handName: result.descr || "Unknown hand",
+      handRank,
+      strength,
+      cards: result.cards || []
+    };
+  } catch (error) {
+    console.error("Error analyzing hand:", error);
+    return {
+      handName: "Error analyzing hand",
+      handRank: 0,
+      strength: "unknown"
+    };
+  }
+}

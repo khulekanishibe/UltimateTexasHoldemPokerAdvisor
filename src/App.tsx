@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Spade as Spades, TrendingUp, Calculator, Target, Zap, Clock } from "lucide-react";
+import { Spade as Spades, TrendingUp, Calculator, Target, Zap, Clock, Bot } from "lucide-react";
 import CardPicker from "./components/CardPicker";
 import { evaluateHand, formatCards, isPremiumHand } from "./components/HandEvaluator";
 import { 
@@ -10,13 +10,15 @@ import {
   type BettingAdvice 
 } from "./components/BetAdvisor";
 import { monteCarloSimulation, quickSimulation, type SimulationResult } from "./utils/monteCarlo";
+import OpenAIAdvisor from "./components/OpenAIAdvisor";
 
 /**
- * Ultimate Texas Hold'em Poker Advisor
+ * Ultimate Texas Hold'em Poker Advisor with OpenAI Integration
  * 
  * A comprehensive poker strategy tool that provides:
  * - Real-time betting advice based on hand strength
  * - Monte Carlo simulation for win probability analysis
+ * - AI-powered advanced betting recommendations via OpenAI API
  * - Stage-specific strategy recommendations
  * - Professional poker table UI/UX
  */
@@ -249,10 +251,10 @@ export default function App() {
             <h1 className="text-xl font-bold bg-gradient-to-r from-yellow-400 to-yellow-600 bg-clip-text text-transparent">
               Ultimate Texas Hold'em Advisor
             </h1>
-            <Target className="h-6 w-6 text-yellow-500" />
+            <Bot className="h-6 w-6 text-blue-500" />
           </div>
           <p className="text-center text-gray-400 mt-1 text-xs">
-            Professional poker strategy with Monte Carlo simulation
+            Professional poker strategy with Monte Carlo simulation + AI advice
           </p>
         </div>
       </div>
@@ -269,7 +271,7 @@ export default function App() {
         <div className="h-full grid grid-cols-12 grid-rows-12 gap-3">
           
           {/* Betting Advice - Top Full Width */}
-          <div className="col-span-12 row-span-3 bg-gray-800/90 backdrop-blur-sm rounded-xl p-4 border border-gray-700 shadow-xl">
+          <div className="col-span-12 row-span-4 bg-gray-800/90 backdrop-blur-sm rounded-xl p-4 border border-gray-700 shadow-xl">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-lg font-bold flex items-center gap-2">
                 <Target className="h-4 w-4 text-yellow-500" />
@@ -300,7 +302,7 @@ export default function App() {
               </div>
             </div>
             
-            <div className={`p-3 rounded-xl border-2 ${getAdviceStyle(advice)} shadow-lg`}>
+            <div className={`p-3 rounded-xl border-2 ${getAdviceStyle(advice)} shadow-lg mb-3`}>
               <p className="text-lg font-bold text-center mb-1">
                 {advice.action}
               </p>
@@ -325,6 +327,14 @@ export default function App() {
               </div>
             </div>
 
+            {/* AI Advisor Component */}
+            <OpenAIAdvisor 
+              selectedCards={selectedCards}
+              simulationResult={simulationResult}
+              gameStage={gameStage}
+              handDescription={handDescription}
+            />
+
             {/* Error Display */}
             {simulationError && (
               <div className="mt-2 p-2 bg-red-900/20 border border-red-500 rounded-lg">
@@ -340,7 +350,7 @@ export default function App() {
           </div>
 
           {/* Hand Analysis - Left Side */}
-          <div className="col-span-3 row-span-9 bg-gray-800/90 backdrop-blur-sm rounded-xl p-4 border border-gray-700 shadow-xl">
+          <div className="col-span-3 row-span-8 bg-gray-800/90 backdrop-blur-sm rounded-xl p-4 border border-gray-700 shadow-xl">
             <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
               <Spades className="h-3 w-3 text-yellow-500" />
               Hand Analysis
@@ -410,7 +420,7 @@ export default function App() {
           </div>
 
           {/* Card Picker - Center */}
-          <div className="col-span-6 row-span-9 bg-gray-800/90 backdrop-blur-sm rounded-xl p-3 border border-gray-700 shadow-xl overflow-hidden">
+          <div className="col-span-6 row-span-8 bg-gray-800/90 backdrop-blur-sm rounded-xl p-3 border border-gray-700 shadow-xl overflow-hidden">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <Calculator className="h-4 w-4 text-yellow-500" />
@@ -426,7 +436,7 @@ export default function App() {
           </div>
 
           {/* Monte Carlo Simulation - Right Side */}
-          <div className="col-span-3 row-span-9 bg-gray-800/90 backdrop-blur-sm rounded-xl p-4 border border-gray-700 shadow-xl">
+          <div className="col-span-3 row-span-8 bg-gray-800/90 backdrop-blur-sm rounded-xl p-4 border border-gray-700 shadow-xl">
             <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
               <TrendingUp className="h-3 w-3 text-yellow-500" />
               Monte Carlo

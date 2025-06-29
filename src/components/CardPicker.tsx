@@ -6,12 +6,11 @@ export type Card = string;
 // All suits in display order
 const allSuits = ['h', 'd', 's', 'c'] as const;
 
-// Ranks arranged in 3×4 grid pattern (excluding Ace)
+// Ranks arranged in 4×3 grid pattern (excluding Ace)
 const gridRanks = [
-  ['2', '3', '4'],
-  ['5', '6', '7'], 
-  ['8', '9', '10'],
-  ['J', 'Q', 'K']
+  ['2', '3', '4', '5'],
+  ['6', '7', '8', '9'], 
+  ['10', 'J', 'Q', 'K']
 ];
 
 /**
@@ -46,9 +45,15 @@ interface CardPickerProps {
 }
 
 /**
- * Compact CardPicker Component
+ * Professional CardPicker Component
  * 
- * Optimized for the grid layout with minimal space usage
+ * Features:
+ * - Large, clear card buttons with white backgrounds
+ * - Organized by suit in vertical columns
+ * - Up to 7 card selection (2 hole + 5 community)
+ * - Clear visual feedback for selected cards
+ * - Individual card removal capability
+ * - Responsive design for all screen sizes
  */
 export default function CardPicker({ onSelect, selectedCards = [] }: CardPickerProps) {
   const [selected, setSelected] = useState<Card[]>(selectedCards);
@@ -73,6 +78,23 @@ export default function CardPicker({ onSelect, selectedCards = [] }: CardPickerP
   };
 
   /**
+   * Remove specific card from selection
+   */
+  const removeCard = (cardToRemove: Card) => {
+    const newSelection = selected.filter(c => c !== cardToRemove);
+    setSelected(newSelection);
+    onSelect(newSelection);
+  };
+
+  /**
+   * Clear all selected cards
+   */
+  const handleClearAll = () => {
+    setSelected([]);
+    onSelect([]);
+  };
+
+  /**
    * Render individual card button
    */
   const renderCard = (rank: string, suit: string, isAce: boolean = false) => {
@@ -86,46 +108,47 @@ export default function CardPicker({ onSelect, selectedCards = [] }: CardPickerP
         onClick={() => toggleCard(card)}
         disabled={isDisabled}
         className={`
-          ${isAce ? 'w-8 h-12' : 'w-7 h-10'} rounded border shadow-sm p-1 text-center font-bold
+          ${isAce ? 'w-12 h-16' : 'w-10 h-14'} rounded-lg border-2 shadow-md p-2 text-center font-bold
           flex flex-col justify-center items-center
           transition-all duration-200 ease-in-out
-          ${rank === '10' ? 'text-xs' : isAce ? 'text-sm' : 'text-xs'}
+          ${rank === '10' ? 'text-xs' : isAce ? 'text-base' : 'text-sm'}
           ${isSelected 
-            ? `${isAce ? 'bg-yellow-600 border-yellow-500' : 'bg-green-600 border-green-500'} text-white shadow-md scale-105` 
-            : `bg-white border-gray-300 hover:bg-gray-50 hover:border-gray-400 hover:shadow-sm hover:scale-105 ${getSuitColor(suit)}`
+            ? `${isAce ? 'bg-yellow-500 border-yellow-400 ring-2 ring-yellow-300' : 'bg-green-500 border-green-400 ring-2 ring-green-300'} text-white shadow-xl scale-110 z-10` 
+            : `bg-white border-gray-300 hover:bg-gray-50 hover:border-gray-400 hover:shadow-lg hover:scale-105 ${getSuitColor(suit)}`
           }
           ${isDisabled 
-            ? 'opacity-40 cursor-not-allowed hover:scale-100' 
+            ? 'opacity-40 cursor-not-allowed hover:scale-100 hover:shadow-md' 
             : 'cursor-pointer active:scale-95'
           }
+          ${isAce ? 'shadow-lg border-4' : ''}
         `}
         aria-pressed={isSelected}
         aria-label={`${rank} of ${getSuitName(suit)}`}
         title={`${rank}${getSuitSymbol(suit)}`}
       >
-        <span className={`leading-none font-bold ${isAce ? 'text-sm' : 'text-xs'}`}>{rank}</span>
-        <span className={`${isAce ? 'text-sm' : 'text-xs'} leading-none`}>{getSuitSymbol(suit)}</span>
+        <span className={`leading-none font-bold ${isAce ? 'text-lg' : ''}`}>{rank}</span>
+        <span className={`${isAce ? 'text-xl' : 'text-base'} leading-none`}>{getSuitSymbol(suit)}</span>
       </button>
     );
   };
 
   /**
-   * Render compact suit section
+   * Render suit column with 4×3 grid + centered Ace
    */
-  const renderSuitSection = (suit: string) => (
-    <div key={suit} className="flex flex-col items-center bg-gray-700/20 rounded-lg p-2">
-      {/* Compact suit header */}
-      <div className="mb-2 text-center">
-        <div className={`text-lg ${getSuitColor(suit)} bg-white rounded-full w-6 h-6 flex items-center justify-center shadow-sm border mb-1`}>
+  const renderSuitColumn = (suit: string) => (
+    <div key={suit} className="flex flex-col items-center bg-gray-700/20 rounded-xl p-3 border border-gray-600">
+      {/* Suit header */}
+      <div className="mb-3 text-center">
+        <div className={`text-xl ${getSuitColor(suit)} bg-white rounded-full w-8 h-8 flex items-center justify-center shadow-md border-2 border-gray-200 mb-2`}>
           {getSuitSymbol(suit)}
         </div>
         <div className="text-xs text-white font-bold uppercase tracking-wider">
-          {getSuitName(suit).slice(0, 1)}
+          {getSuitName(suit)}
         </div>
       </div>
       
-      {/* Compact 3×4 Grid */}
-      <div className="grid grid-cols-3 gap-1 mb-2">
+      {/* 4×3 Grid */}
+      <div className="grid grid-cols-4 gap-2 mb-3">
         {gridRanks.flat().map((rank) => (
           renderCard(rank, suit)
         ))}
@@ -139,40 +162,75 @@ export default function CardPicker({ onSelect, selectedCards = [] }: CardPickerP
   );
 
   return (
-    <div className="w-full h-full">
-      {/* Compact selected cards display at top */}
+    <div className="w-full h-full flex flex-col">
+      {/* Header with selection count and clear button */}
+      <div className="flex justify-between items-center mb-3">
+        <div className="text-xs text-gray-300">
+          <span className="font-medium">Selected: {selected.length}/7</span>
+          {selected.length <= 2 && <span className="ml-2 text-blue-400">(Choose hole cards)</span>}
+          {selected.length > 2 && selected.length <= 5 && <span className="ml-2 text-green-400">(Add community cards)</span>}
+          {selected.length > 5 && <span className="ml-2 text-yellow-400">(Add turn/river)</span>}
+        </div>
+        
+        {selected.length > 0 && (
+          <button
+            onClick={handleClearAll}
+            className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-lg font-medium transition-colors duration-200 text-xs shadow-md hover:shadow-lg"
+          >
+            Clear All
+          </button>
+        )}
+      </div>
+      
+      {/* Selected cards display */}
       {selected.length > 0 && (
-        <div className="mb-3 p-2 bg-gray-700/30 rounded-lg">
-          <div className="flex flex-wrap justify-center gap-1">
+        <div className="mb-3 p-3 bg-gray-700/30 rounded-lg border border-gray-600">
+          <p className="text-xs font-medium text-gray-300 mb-2 text-center">Selected Cards</p>
+          <div className="flex flex-wrap justify-center gap-2">
             {selected.map((card, index) => {
               const rank = card.slice(0, -1);
               const suit = card.slice(-1);
               const suitSymbol = getSuitSymbol(suit);
               const isHoleCard = index < 2;
+              const isAce = rank === 'A';
               
               return (
-                <div
+                <button
                   key={card}
+                  onClick={() => removeCard(card)}
                   className={`
-                    px-2 py-1 rounded text-xs font-bold
+                    px-3 py-2 rounded-lg text-xs font-bold border-2 shadow-sm transition-all duration-200
+                    hover:scale-105 active:scale-95 cursor-pointer
                     ${isHoleCard 
-                      ? 'bg-blue-600 text-white' 
-                      : 'bg-green-600 text-white'
+                      ? 'bg-blue-600 border-blue-400 text-white hover:bg-blue-700' 
+                      : 'bg-green-600 border-green-400 text-white hover:bg-green-700'
                     }
+                    ${isAce ? 'ring-2 ring-yellow-400' : ''}
                   `}
+                  title={`Remove ${rank}${suitSymbol}`}
                 >
                   {rank}{suitSymbol}
-                </div>
+                </button>
               );
             })}
+          </div>
+          <div className="mt-2 text-xs text-gray-400 text-center">
+            <span className="inline-flex items-center mr-4">
+              <span className="w-2 h-2 bg-blue-600 rounded mr-1"></span>
+              Hole Cards
+            </span>
+            <span className="inline-flex items-center">
+              <span className="w-2 h-2 bg-green-600 rounded mr-1"></span>
+              Community Cards
+            </span>
           </div>
         </div>
       )}
       
-      {/* Compact card grid organized by suits in 2×2 layout */}
-      <div className="bg-gray-800/50 rounded-lg p-2">
-        <div className="grid grid-cols-2 gap-2">
-          {allSuits.map(suit => renderSuitSection(suit))}
+      {/* Card grid organized by suits in vertical columns */}
+      <div className="flex-1 bg-gray-800/50 rounded-xl p-3 border border-gray-700 overflow-auto">
+        <div className="grid grid-cols-4 gap-3 h-full">
+          {allSuits.map(suit => renderSuitColumn(suit))}
         </div>
       </div>
     </div>
