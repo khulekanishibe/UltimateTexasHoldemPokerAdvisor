@@ -270,8 +270,8 @@ export default function App() {
       <div className="h-[calc(100vh-140px)] p-4">
         <div className="h-full grid grid-cols-12 grid-rows-12 gap-3">
           
-          {/* Betting Advice - Top Full Width */}
-          <div className="col-span-12 row-span-4 bg-gray-800/90 backdrop-blur-sm rounded-xl p-4 border border-gray-700 shadow-xl">
+          {/* Betting Advice - Top (Narrower) */}
+          <div className="col-span-8 row-span-4 bg-gray-800/90 backdrop-blur-sm rounded-xl p-4 border border-gray-700 shadow-xl">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-lg font-bold flex items-center gap-2">
                 <Target className="h-4 w-4 text-yellow-500" />
@@ -327,14 +327,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* AI Advisor Component */}
-            <OpenAIAdvisor 
-              selectedCards={selectedCards}
-              simulationResult={simulationResult}
-              gameStage={gameStage}
-              handDescription={handDescription}
-            />
-
             {/* Error Display */}
             {simulationError && (
               <div className="mt-2 p-2 bg-red-900/20 border border-red-500 rounded-lg">
@@ -347,6 +339,84 @@ export default function App() {
                 </button>
               </div>
             )}
+          </div>
+
+          {/* Monte Carlo + AI Advisor - Top Right */}
+          <div className="col-span-4 row-span-4 bg-gray-800/90 backdrop-blur-sm rounded-xl p-4 border border-gray-700 shadow-xl">
+            <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
+              <TrendingUp className="h-3 w-3 text-yellow-500" />
+              Monte Carlo
+              {fastMode && <span className="text-xs bg-green-600 px-1 py-0.5 rounded">FAST</span>}
+            </h3>
+
+            {isSimulating && (
+              <div className="flex flex-col items-center justify-center py-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-yellow-500 mb-2"></div>
+                <span className="text-gray-400 font-medium text-xs text-center">
+                  Running {fastMode ? '300' : '1,000'} simulations...
+                </span>
+              </div>
+            )}
+
+            {simulationResult && !isSimulating && !simulationError && (
+              <div className="space-y-2 mb-4">
+                <ProgressBar 
+                  label="Win" 
+                  value={simulationResult.win} 
+                  color="bg-gradient-to-r from-green-600 to-green-500"
+                  icon={<span className="text-green-400">🏆</span>}
+                />
+                <ProgressBar 
+                  label="Tie" 
+                  value={simulationResult.tie} 
+                  color="bg-gradient-to-r from-blue-600 to-blue-500"
+                  icon={<span className="text-blue-400">🤝</span>}
+                />
+                <ProgressBar 
+                  label="Lose" 
+                  value={simulationResult.lose} 
+                  color="bg-gradient-to-r from-red-600 to-red-500"
+                  icon={<span className="text-red-400">💔</span>}
+                />
+                
+                <div className="pt-2 border-t border-gray-600">
+                  <div className="text-xs text-gray-400 text-center">
+                    {simulationResult.iterations.toLocaleString()} iterations
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {simulationError && (
+              <div className="text-center py-4 text-red-400 mb-4">
+                <div className="text-2xl mb-2">⚠️</div>
+                <p className="text-xs font-medium">Simulation Error</p>
+                <button
+                  onClick={handleReset}
+                  className="mt-2 bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-xs"
+                >
+                  Reset
+                </button>
+              </div>
+            )}
+
+            {!simulationResult && !isSimulating && selectedCards.length < 5 && !simulationError && (
+              <div className="text-center py-4 text-gray-500 mb-4">
+                <Calculator className="h-6 w-6 mx-auto mb-2 opacity-50" />
+                <p className="text-xs font-medium">Select 5+ cards</p>
+                <p className="text-xs">for simulation</p>
+              </div>
+            )}
+
+            {/* AI Advisor Component - Now integrated here */}
+            <div className="border-t border-gray-600 pt-3">
+              <OpenAIAdvisor 
+                selectedCards={selectedCards}
+                simulationResult={simulationResult}
+                gameStage={gameStage}
+                handDescription={handDescription}
+              />
+            </div>
           </div>
 
           {/* Hand Analysis - Left Side */}
@@ -420,7 +490,7 @@ export default function App() {
           </div>
 
           {/* Card Picker - Center */}
-          <div className="col-span-6 row-span-8 bg-gray-800/90 backdrop-blur-sm rounded-xl p-3 border border-gray-700 shadow-xl overflow-hidden">
+          <div className="col-span-9 row-span-8 bg-gray-800/90 backdrop-blur-sm rounded-xl p-3 border border-gray-700 shadow-xl overflow-hidden">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <Calculator className="h-4 w-4 text-yellow-500" />
@@ -433,74 +503,6 @@ export default function App() {
             <div className="h-[calc(100%-2rem)] overflow-auto">
               <CardPicker onSelect={setSelectedCards} selectedCards={selectedCards} />
             </div>
-          </div>
-
-          {/* Monte Carlo Simulation - Right Side */}
-          <div className="col-span-3 row-span-8 bg-gray-800/90 backdrop-blur-sm rounded-xl p-4 border border-gray-700 shadow-xl">
-            <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
-              <TrendingUp className="h-3 w-3 text-yellow-500" />
-              Monte Carlo
-              {fastMode && <span className="text-xs bg-green-600 px-1 py-0.5 rounded">FAST</span>}
-            </h3>
-
-            {isSimulating && (
-              <div className="flex flex-col items-center justify-center py-6">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-yellow-500 mb-2"></div>
-                <span className="text-gray-400 font-medium text-xs text-center">
-                  Running {fastMode ? '300' : '1,000'} simulations...
-                </span>
-              </div>
-            )}
-
-            {simulationResult && !isSimulating && !simulationError && (
-              <div className="space-y-2">
-                <ProgressBar 
-                  label="Win" 
-                  value={simulationResult.win} 
-                  color="bg-gradient-to-r from-green-600 to-green-500"
-                  icon={<span className="text-green-400">🏆</span>}
-                />
-                <ProgressBar 
-                  label="Tie" 
-                  value={simulationResult.tie} 
-                  color="bg-gradient-to-r from-blue-600 to-blue-500"
-                  icon={<span className="text-blue-400">🤝</span>}
-                />
-                <ProgressBar 
-                  label="Lose" 
-                  value={simulationResult.lose} 
-                  color="bg-gradient-to-r from-red-600 to-red-500"
-                  icon={<span className="text-red-400">💔</span>}
-                />
-                
-                <div className="pt-2 border-t border-gray-600">
-                  <div className="text-xs text-gray-400 text-center">
-                    {simulationResult.iterations.toLocaleString()} iterations
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {simulationError && (
-              <div className="text-center py-6 text-red-400">
-                <div className="text-2xl mb-2">⚠️</div>
-                <p className="text-xs font-medium">Simulation Error</p>
-                <button
-                  onClick={handleReset}
-                  className="mt-2 bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-xs"
-                >
-                  Reset
-                </button>
-              </div>
-            )}
-
-            {!simulationResult && !isSimulating && selectedCards.length < 5 && !simulationError && (
-              <div className="text-center py-6 text-gray-500">
-                <Calculator className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p className="text-xs font-medium">Select 5+ cards</p>
-                <p className="text-xs">for simulation</p>
-              </div>
-            )}
           </div>
         </div>
       </div>

@@ -214,48 +214,61 @@ Respond in JSON format:
 
   // Don't render anything for pre-flop or insufficient cards
   if (selectedCards.length < 5) {
-    return null;
+    return (
+      <div>
+        <div className="flex items-center gap-2 mb-2">
+          <Bot className="h-3 w-3 text-blue-500" />
+          <h4 className="text-xs font-bold text-blue-400">AI Strategic Advisor</h4>
+          <Sparkles className="h-2 w-2 text-yellow-400" />
+        </div>
+        <div className="text-center py-2">
+          <p className="text-xs text-gray-500">
+            AI advisor available after Monte Carlo simulation
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="mt-3 p-3 bg-gray-900/50 rounded-lg border border-gray-600">
+    <div>
       <div className="flex items-center gap-2 mb-2">
-        <Bot className="h-4 w-4 text-blue-500" />
-        <h4 className="text-sm font-bold text-blue-400">AI Strategic Advisor</h4>
-        <Sparkles className="h-3 w-3 text-yellow-400" />
+        <Bot className="h-3 w-3 text-blue-500" />
+        <h4 className="text-xs font-bold text-blue-400">AI Strategic Advisor</h4>
+        <Sparkles className="h-2 w-2 text-yellow-400" />
       </div>
 
       {isLoading && (
-        <div className="flex items-center justify-center py-4">
-          <Loader2 className="h-4 w-4 animate-spin text-blue-500 mr-2" />
-          <span className="text-xs text-gray-400">Consulting AI advisor...</span>
+        <div className="flex items-center justify-center py-3">
+          <Loader2 className="h-3 w-3 animate-spin text-blue-500 mr-2" />
+          <span className="text-xs text-gray-400">Consulting AI...</span>
         </div>
       )}
 
       {error && (
         <div className="flex items-center gap-2 p-2 bg-red-900/20 border border-red-500 rounded text-red-400">
-          <AlertCircle className="h-3 w-3" />
+          <AlertCircle className="h-2 w-2" />
           <div className="text-xs">
-            <p className="font-medium">AI Advisor Unavailable</p>
-            <p className="text-red-300 mt-1">{error}</p>
+            <p className="font-medium">AI Unavailable</p>
+            <p className="text-red-300 mt-1 text-xs">{error}</p>
           </div>
         </div>
       )}
 
       {aiAdvice && !isLoading && (
-        <div className={`p-3 rounded-lg border ${getAIAdviceStyle(aiAdvice.riskLevel)}`}>
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-sm font-bold">
+        <div className={`p-2 rounded-lg border ${getAIAdviceStyle(aiAdvice.riskLevel)}`}>
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-xs font-bold">
               🤖 {aiAdvice.recommendation}
             </p>
             <div className="flex gap-1">
-              <span className={`px-2 py-1 rounded text-xs ${
+              <span className={`px-1 py-0.5 rounded text-xs ${
                 aiAdvice.confidence === 'high' ? 'bg-green-600' :
                 aiAdvice.confidence === 'medium' ? 'bg-yellow-600' : 'bg-gray-600'
               }`}>
                 {aiAdvice.confidence.toUpperCase()}
               </span>
-              <span className={`px-2 py-1 rounded text-xs ${
+              <span className={`px-1 py-0.5 rounded text-xs ${
                 aiAdvice.riskLevel === 'conservative' ? 'bg-blue-600' :
                 aiAdvice.riskLevel === 'aggressive' ? 'bg-red-600' : 'bg-purple-600'
               }`}>
@@ -272,7 +285,7 @@ Respond in JSON format:
       {!aiAdvice && !isLoading && !error && (
         <div className="text-center py-2">
           <p className="text-xs text-gray-500">
-            AI advisor will analyze your hand after Monte Carlo simulation
+            AI will analyze after simulation completes
           </p>
         </div>
       )}
