@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useTransition } from "react";
+import React, { useState, useEffect, useTransition, useRef } from "react";
 import { Spade as Spades, TrendingUp, Calculator, Target, Zap, Clock } from "lucide-react";
 import CardPicker from "./components/CardPicker";
 import { evaluateHand, formatCards, isPremiumHand } from "./components/HandEvaluator";
@@ -37,6 +37,9 @@ export default function App() {
   const [fastMode, setFastMode] = useState(true);
   const [simulationError, setSimulationError] = useState<string | null>(null);
 
+  // Ref to track current simulation to prevent race conditions
+  const currentSimulationRef = useRef<string | null>(null);
+
   // Derived state
   const gameStage = getGameStage(selectedCards.length);
   const holeCards = selectedCards.slice(0, 2);
@@ -65,6 +68,8 @@ export default function App() {
         stage: 'preflop'
       });
       setSimulationResult(null);
+      setIsSimulating(false);
+      currentSimulationRef.current = null;
       return;
     }
 
@@ -73,6 +78,8 @@ export default function App() {
       const preflopAdvice = getPreflopAdvice(holeCards);
       setAdvice(preflopAdvice);
       setSimulationResult(null);
+      setIsSimulating(false);
+      currentSimulationRef.current = null;
       return;
     }
 
@@ -85,8 +92,14 @@ export default function App() {
         stage: gameStage
       });
       setSimulationResult(null);
+      setIsSimulating(false);
+      currentSimulationRef.current = null;
       return;
     }
+
+    // Create unique simulation ID to prevent race conditions
+    const simulationId = `${selectedCards.join('')}-${Date.now()}`;
+    currentSimulationRef.current = simulationId;
 
     // Run Monte Carlo simulation for post-flop advice
     setIsSimulating(true);
@@ -97,21 +110,27 @@ export default function App() {
       stage: gameStage
     });
     
-    // Use startTransition to mark this as a non-urgent update
-    startTransition(() => {
-      const simulationFunction = fastMode ? quickSimulation : monteCarloSimulation;
-      const iterations = fastMode ? 300 : 1000;
-      
-      // Run simulation asynchronously
-      simulationFunction(selectedCards, iterations)
-        .then((result) => {
+    // Run simulation asynchronously without startTransition to avoid flickering
+    const runSimulation = async () => {
+      try {
+        const simulationFunction = fastMode ? quickSimulation : monteCarloSimulation;
+        const iterations = fastMode ? 300 : 1000;
+        
+        const result = await simulationFunction(selectedCards, iterations);
+        
+        // Only update if this is still the current simulation
+        if (currentSimulationRef.current === simulationId) {
           setSimulationResult(result);
           const postflopAdvice = getPostflopAdvice(result.win, gameStage);
           setAdvice(postflopAdvice);
           setSimulationError(null);
-        })
-        .catch((error) => {
-          console.error("Simulation error:", error);
+          setIsSimulating(false);
+        }
+      } catch (error) {
+        console.error("Simulation error:", error);
+        
+        // Only update if this is still the current simulation
+        if (currentSimulationRef.current === simulationId) {
           setSimulationError(error.message || "Unknown error occurred");
           setAdvice({
             action: "⚠️ Simulation Error",
@@ -119,20 +138,23 @@ export default function App() {
             reasoning: "Please try selecting different cards",
             stage: gameStage
           });
-        })
-        .finally(() => {
           setIsSimulating(false);
-        });
-    });
+        }
+      }
+    };
+
+    runSimulation();
   }, [selectedCards, gameStage, holeCards, fastMode]);
 
   /**
    * Reset all state
    */
   const handleReset = () => {
+    currentSimulationRef.current = null;
     setSelectedCards([]);
     setSimulationResult(null);
     setSimulationError(null);
+    setIsSimulating(false);
     setAdvice({
       action: "Select your 2 hole cards to begin",
       confidence: 'low',
@@ -224,8 +246,8 @@ export default function App() {
           <h2 className="text-xl font-bold mb-4 flex items-center gap-3">
             <Target className="h-5 w-5 text-yellow-500" />
             Betting Advice
-            {advice.confidence === 'high' && <Zap className="h-4 w-4 text-yellow-400" />}
-            {(isSimulating || isPending) && <Clock className="h-4 w-4 text-blue-400 animate-spin" />}
+            {advice.confidence === 'high' && !isSimulating && <Zap className="h-4 w-4 text-yellow-400" />}
+            {isSimulating && <Clock className="h-4 w-4 text-blue-400 animate-spin" />}
           </h2>
           
           <div className={`p-4 rounded-xl border-2 ${getAdviceStyle(advice)} shadow-lg`}>
@@ -245,6 +267,11 @@ export default function App() {
               <span className="px-2 py-1 rounded bg-gray-700">
                 {advice.stage.toUpperCase()}
               </span>
+              {isSimulating && (
+                <span className="px-2 py-1 rounded bg-blue-600 animate-pulse">
+                  CALCULATING
+                </span>
+              )}
             </div>
           </div>
 
@@ -284,9 +311,10 @@ export default function App() {
               <span className="text-sm text-gray-400">Fast Mode</span>
               <button
                 onClick={() => setFastMode(!fastMode)}
+                disabled={isSimulating}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                   fastMode ? 'bg-green-600' : 'bg-gray-600'
-                }`}
+                } ${isSimulating ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <span
                   className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
@@ -377,7 +405,7 @@ export default function App() {
               {fastMode && <span className="text-xs bg-green-600 px-2 py-1 rounded">FAST</span>}
             </h3>
 
-            {(isSimulating || isPending) && (
+            {isSimulating && (
               <div className="flex items-center justify-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-500"></div>
                 <span className="ml-3 text-gray-400 font-medium text-sm">
@@ -386,7 +414,7 @@ export default function App() {
               </div>
             )}
 
-            {simulationResult && !isSimulating && !isPending && !simulationError && (
+            {simulationResult && !isSimulating && !simulationError && (
               <div className="space-y-3">
                 <ProgressBar 
                   label="Win Probability" 
@@ -432,7 +460,7 @@ export default function App() {
               </div>
             )}
 
-            {!simulationResult && !isSimulating && !isPending && selectedCards.length < 5 && !simulationError && (
+            {!simulationResult && !isSimulating && selectedCards.length < 5 && !simulationError && (
               <div className="text-center py-8 text-gray-500">
                 <Calculator className="h-12 w-12 mx-auto mb-3 opacity-50" />
                 <p className="text-base font-medium">Select at least 5 cards</p>

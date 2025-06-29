@@ -54,14 +54,59 @@ function shuffleArray<T>(array: T[]): T[] {
 }
 
 /**
- * Process a batch of Monte Carlo iterations
- * This allows us to break up the work and yield control back to the browser
+ * Process a single Monte Carlo iteration
+ * Separated for better error handling and performance
  */
-function processBatch(
+function processIteration(
+  playerHole: string[],
+  existingCommunity: string[],
+  communityNeeded: number,
+  shuffled: string[]
+): { result: 'win' | 'tie' | 'lose' } | null {
+  try {
+    // Generate dealer hole cards (first 2 from shuffled deck)
+    const dealerHole = shuffled.slice(0, 2);
+    
+    // Fill community cards from shuffled deck (after dealer hole cards)
+    const additionalCommunity = shuffled.slice(2, 2 + communityNeeded);
+    const fullCommunity = [...existingCommunity, ...additionalCommunity];
+    
+    // Create final hands (best 5 from 7 cards)
+    const playerCards = [...playerHole, ...fullCommunity];
+    const dealerCards = [...dealerHole, ...fullCommunity];
+    
+    // Convert cards to pokersolver format (10 -> T)
+    const playerSolverCards = playerCards.map(convertCardForSolver);
+    const dealerSolverCards = dealerCards.map(convertCardForSolver);
+    
+    // Evaluate hands using pokersolver
+    const playerHand = Hand.solve(playerSolverCards);
+    const dealerHand = Hand.solve(dealerSolverCards);
+    
+    // Determine winner
+    const winners = Hand.winners([playerHand, dealerHand]);
+    
+    if (winners.length === 2) {
+      return { result: 'tie' };
+    } else if (winners[0] === playerHand) {
+      return { result: 'win' };
+    } else {
+      return { result: 'lose' };
+    }
+  } catch (error) {
+    console.warn('Error in Monte Carlo iteration:', error);
+    return null;
+  }
+}
+
+/**
+ * Process a batch of Monte Carlo iterations with proper async yielding
+ */
+async function processBatch(
   knownCards: string[],
   remainingDeck: string[],
   batchSize: number
-): { wins: number; ties: number; losses: number; processed: number } {
+): Promise<{ wins: number; ties: number; losses: number; processed: number }> {
   let wins = 0;
   let ties = 0;
   let losses = 0;
@@ -72,49 +117,29 @@ function processBatch(
   const communityNeeded = 5 - existingCommunity.length;
 
   for (let i = 0; i < batchSize; i++) {
-    try {
-      // Shuffle remaining deck for this iteration
-      const shuffled = shuffleArray(remainingDeck);
-      
-      // Generate dealer hole cards (first 2 from shuffled deck)
-      const dealerHole = shuffled.slice(0, 2);
-      
-      // Fill community cards from shuffled deck (after dealer hole cards)
-      const additionalCommunity = shuffled.slice(2, 2 + communityNeeded);
-      const fullCommunity = [...existingCommunity, ...additionalCommunity];
-      
-      // Create final hands (best 5 from 7 cards)
-      const playerCards = [...playerHole, ...fullCommunity];
-      const dealerCards = [...dealerHole, ...fullCommunity];
-      
-      // Convert cards to pokersolver format (10 -> T)
-      const playerSolverCards = playerCards.map(convertCardForSolver);
-      const dealerSolverCards = dealerCards.map(convertCardForSolver);
-      
-      // Evaluate hands using pokersolver
-      const playerHand = Hand.solve(playerSolverCards);
-      const dealerHand = Hand.solve(dealerSolverCards);
-      
-      // Determine winner
-      const winners = Hand.winners([playerHand, dealerHand]);
-      
-      if (winners.length === 2) {
-        // Tie
-        ties++;
-      } else if (winners[0] === playerHand) {
-        // Player wins
-        wins++;
-      } else {
-        // Dealer wins
-        losses++;
+    // Shuffle remaining deck for this iteration
+    const shuffled = shuffleArray(remainingDeck);
+    
+    const result = processIteration(playerHole, existingCommunity, communityNeeded, shuffled);
+    
+    if (result) {
+      switch (result.result) {
+        case 'win':
+          wins++;
+          break;
+        case 'tie':
+          ties++;
+          break;
+        case 'lose':
+          losses++;
+          break;
       }
-      
       processed++;
-      
-    } catch (error) {
-      console.warn(`Error in Monte Carlo iteration ${i}:`, error);
-      // Skip this iteration on error but continue
-      continue;
+    }
+
+    // Yield control every 10 iterations to keep UI responsive
+    if (i % 10 === 0 && i > 0) {
+      await new Promise(resolve => setTimeout(resolve, 0));
     }
   }
 
@@ -126,8 +151,8 @@ function processBatch(
  * 
  * Process:
  * 1. Remove known cards from deck
- * 2. Process iterations in batches to avoid blocking UI
- * 3. Use setTimeout to yield control between batches
+ * 2. Process iterations in small batches with async yielding
+ * 3. Use proper error handling and validation
  * 4. Calculate percentages from all iterations
  * 
  * @param knownCards Array of known cards (player hole + community)
@@ -140,7 +165,7 @@ export async function monteCarloSimulation(
 ): Promise<SimulationResult> {
   
   // Validate input
-  if (knownCards.length < 2) {
+  if (!Array.isArray(knownCards) || knownCards.length < 2) {
     throw new Error("Need at least 2 cards (hole cards) for simulation");
   }
   
@@ -148,8 +173,23 @@ export async function monteCarloSimulation(
     throw new Error("Too many cards selected (max 7: 2 hole + 5 community)");
   }
 
+  // Validate card format
+  const validCardRegex = /^(2|3|4|5|6|7|8|9|10|J|Q|K|A)[hdsc]$/;
+  for (const card of knownCards) {
+    if (!validCardRegex.test(card)) {
+      throw new Error(`Invalid card format: ${card}`);
+    }
+  }
+
+  // Check for duplicate cards
+  const uniqueCards = new Set(knownCards);
+  if (uniqueCards.size !== knownCards.length) {
+    throw new Error("Duplicate cards detected");
+  }
+
   // Create deck without known cards
-  const remainingDeck = generateDeck().filter(card => !knownCards.includes(card));
+  const fullDeck = generateDeck();
+  const remainingDeck = fullDeck.filter(card => !knownCards.includes(card));
   
   if (remainingDeck.length < 7) {
     throw new Error("Not enough cards remaining in deck");
@@ -160,8 +200,8 @@ export async function monteCarloSimulation(
   let totalLosses = 0;
   let totalProcessed = 0;
 
-  // Process in batches to avoid blocking the UI
-  const batchSize = 50; // Process 50 iterations at a time
+  // Process in small batches to keep UI responsive
+  const batchSize = 25; // Smaller batches for better responsiveness
   const totalBatches = Math.ceil(iterations / batchSize);
 
   for (let batch = 0; batch < totalBatches; batch++) {
@@ -169,7 +209,7 @@ export async function monteCarloSimulation(
     const currentBatchSize = Math.min(batchSize, remainingIterations);
 
     // Process this batch
-    const batchResult = processBatch(knownCards, remainingDeck, currentBatchSize);
+    const batchResult = await processBatch(knownCards, remainingDeck, currentBatchSize);
     
     totalWins += batchResult.wins;
     totalTies += batchResult.ties;
@@ -178,7 +218,7 @@ export async function monteCarloSimulation(
 
     // Yield control back to the browser between batches
     if (batch < totalBatches - 1) {
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await new Promise(resolve => setTimeout(resolve, 1));
     }
   }
 
