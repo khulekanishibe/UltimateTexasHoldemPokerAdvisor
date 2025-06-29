@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bot, Loader2, AlertCircle, Sparkles, Brain } from 'lucide-react';
+import { Bot, Loader2, AlertCircle, Sparkles, Brain, Zap } from 'lucide-react';
 import { formatCards } from './HandEvaluator';
 import type { SimulationResult } from '../utils/monteCarlo';
 import type { GameStage } from './BetAdvisor';
@@ -122,9 +122,9 @@ function generateFallbackAdvice(
 }
 
 /**
- * Strategic Advisor Component (formerly OpenAI Advisor)
+ * OpenAI Strategic Advisor Component
  * 
- * Provides advanced poker strategy advice using either OpenAI API or
+ * Provides advanced poker strategy advice using OpenAI API with
  * sophisticated fallback logic based on game theory and simulation results.
  */
 export default function OpenAIAdvisor({ 
@@ -136,6 +136,7 @@ export default function OpenAIAdvisor({
   const [aiAdvice, setAiAdvice] = useState<AIAdvice | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [usingFallback, setUsingFallback] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
   const [lastRequestCards, setLastRequestCards] = useState<string>('');
   
   // Ref to track current request to prevent race conditions
@@ -174,7 +175,11 @@ BETTING OPTIONS:
 - Post-flop: 3x bet, 2x bet, or check  
 - Turn/River: 1x bet or fold
 
-Provide your recommendation in JSON format.`;
+Provide your recommendation in JSON format with these exact fields:
+- recommendation: specific action
+- reasoning: brief strategic explanation
+- confidence: "high", "medium", or "low"
+- riskLevel: "conservative", "moderate", or "aggressive"`;
 
     return prompt;
   };
@@ -189,6 +194,7 @@ Provide your recommendation in JSON format.`;
 
     setIsLoading(true);
     setUsingFallback(false);
+    setApiError(null);
 
     // First try OpenAI API
     try {
@@ -196,9 +202,9 @@ Provide your recommendation in JSON format.`;
       
       const prompt = generatePrompt();
       
-      // Try the API with a shorter timeout
+      // Try the API with a reasonable timeout
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
       const response = await fetch('/api/openai-advice', {
         method: 'POST',
@@ -217,21 +223,28 @@ Provide your recommendation in JSON format.`;
         // Only update if this request is still current
         if (currentRequestRef.current === thisRequest) {
           if (data.success && data.advice) {
-            console.log('✅ OpenAI API successful');
+            console.log('✅ OpenAI API successful:', data.advice);
             setAiAdvice(data.advice);
             setIsLoading(false);
+            setApiError(null);
             return;
+          } else {
+            throw new Error(data.error || 'Invalid API response');
           }
         }
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `API failed: ${response.status}`);
       }
-      
-      throw new Error(`API failed: ${response.status}`);
 
     } catch (error) {
-      console.log('⚠️ OpenAI API failed, using fallback logic:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.log('⚠️ OpenAI API failed:', errorMessage);
       
       // Only proceed with fallback if this request is still current
       if (currentRequestRef.current === thisRequest) {
+        setApiError(errorMessage);
+        
         // Use fallback logic
         const fallbackAdvice = generateFallbackAdvice(selectedCards, simulationResult, gameStage, handDescription);
         
@@ -268,6 +281,7 @@ Provide your recommendation in JSON format.`;
       // Clear advice for insufficient cards
       setAiAdvice(null);
       setUsingFallback(false);
+      setApiError(null);
       setLastRequestCards('');
     }
   }, [selectedCards, simulationResult]);
@@ -297,7 +311,8 @@ Provide your recommendation in JSON format.`;
         <h4 className="text-xs font-bold text-blue-400">
           {usingFallback ? 'Strategic Advisor' : 'AI Strategic Advisor'}
         </h4>
-        <Sparkles className="h-2 w-2 text-yellow-400" />
+        {!usingFallback && !apiError && <Zap className="h-2 w-2 text-green-400" />}
+        {apiError && <AlertCircle className="h-2 w-2 text-red-400" />}
       </div>
 
       {selectedCards.length < 2 && (
@@ -341,13 +356,23 @@ Provide your recommendation in JSON format.`;
               <p className="text-xs opacity-90 leading-relaxed">
                 {aiAdvice.reasoning}
               </p>
-              {usingFallback && (
-                <div className="mt-1 pt-1 border-t border-gray-600">
-                  <p className="text-xs text-gray-400 italic">
-                    Using advanced game theory (OpenAI unavailable)
+              
+              {/* Status indicators */}
+              <div className="mt-1 pt-1 border-t border-gray-600">
+                {usingFallback && (
+                  <p className="text-xs text-gray-400 italic flex items-center gap-1">
+                    <Brain className="h-2 w-2" />
+                    Using advanced game theory
+                    {apiError && <span className="text-red-400">({apiError})</span>}
                   </p>
-                </div>
-              )}
+                )}
+                {!usingFallback && !apiError && (
+                  <p className="text-xs text-green-400 italic flex items-center gap-1">
+                    <Zap className="h-2 w-2" />
+                    Powered by OpenAI
+                  </p>
+                )}
+              </div>
             </div>
           )}
         </>
