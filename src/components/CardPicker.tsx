@@ -6,8 +6,13 @@ export type Card = `${'2'|'3'|'4'|'5'|'6'|'7'|'8'|'9'|'T'|'J'|'Q'|'K'|'A'}${'h'|
 // All suits in display order
 const allSuits = ['h', 'd', 's', 'c'] as const;
 
-// All ranks in ascending order
-const allRanks = ['2','3','4','5','6','7','8','9','T','J','Q','K','A'] as const;
+// Ranks arranged in 3x4 grid + Ace at bottom center
+const gridRanks = [
+  ['2', '3', '4'],  // Row 1
+  ['5', '6', '7'],  // Row 2
+  ['8', '9', 'T'],  // Row 3
+  ['J', 'Q', 'K']   // Row 4
+] as const;
 
 /**
  * Convert rank for display (T becomes 10 for better readability)
@@ -51,7 +56,7 @@ interface CardPickerProps {
  * CardPicker Component
  * 
  * Renders a 52-card grid organized by suit in vertical columns.
- * Each suit column shows all 13 ranks from 2 to Ace.
+ * Each suit shows cards in a 3x4 grid with Ace centered at the bottom.
  * Users can select up to 7 cards total (2 hole + 5 community).
  * 
  * Features:
@@ -129,8 +134,39 @@ export default function CardPicker({ onSelect, selectedCards = [] }: CardPickerP
     );
   };
 
+  /**
+   * Render suit column with 3x4 grid + centered Ace
+   */
+  const renderSuitColumn = (suit: string) => (
+    <div key={suit} className="flex flex-col items-center">
+      {/* Suit header */}
+      <div className="mb-4 text-center">
+        <div className={`text-2xl ${getSuitColor(suit)} bg-white rounded-full w-10 h-10 flex items-center justify-center shadow-md border-2 border-gray-200 mb-2`}>
+          {getSuitSymbol(suit)}
+        </div>
+        <div className="text-xs text-white font-bold uppercase tracking-wider">
+          {getSuitName(suit)}
+        </div>
+      </div>
+      
+      {/* 3x4 Grid for ranks 2-K */}
+      <div className="grid grid-cols-3 gap-2 mb-3">
+        {gridRanks.flat().map((rank) => (
+          <div key={`${rank}-${suit}`}>
+            {renderCard(rank, suit)}
+          </div>
+        ))}
+      </div>
+      
+      {/* Centered Ace at bottom */}
+      <div className="flex justify-center">
+        {renderCard('A', suit)}
+      </div>
+    </div>
+  );
+
   return (
-    <div className="w-full max-w-4xl mx-auto">
+    <div className="w-full max-w-5xl mx-auto">
       {/* Header with selection count and clear button */}
       <div className="flex justify-between items-center mb-4">
         <div className="text-sm text-gray-400">
@@ -150,31 +186,10 @@ export default function CardPicker({ onSelect, selectedCards = [] }: CardPickerP
         )}
       </div>
       
-      {/* Card grid organized by suits in vertical columns */}
+      {/* Card grid organized by suits in vertical columns with 3x4 + Ace layout */}
       <div className="bg-poker-felt rounded-xl p-6 shadow-inner border-4 border-poker-feltDark">
-        <div className="grid grid-cols-4 gap-4 justify-items-center">
-          {allSuits.map(suit => (
-            <div key={suit} className="flex flex-col items-center">
-              {/* Suit header */}
-              <div className="mb-4 text-center">
-                <div className={`text-2xl ${getSuitColor(suit)} bg-white rounded-full w-10 h-10 flex items-center justify-center shadow-md border-2 border-gray-200 mb-2`}>
-                  {getSuitSymbol(suit)}
-                </div>
-                <div className="text-xs text-white font-bold uppercase tracking-wider">
-                  {getSuitName(suit)}
-                </div>
-              </div>
-              
-              {/* All 13 cards for this suit */}
-              <div className="grid grid-cols-1 gap-2">
-                {allRanks.map((rank) => (
-                  <div key={`${rank}-${suit}`}>
-                    {renderCard(rank, suit)}
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 justify-items-center">
+          {allSuits.map(suit => renderSuitColumn(suit))}
         </div>
       </div>
       
