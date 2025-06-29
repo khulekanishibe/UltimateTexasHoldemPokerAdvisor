@@ -54,62 +54,30 @@ function shuffleArray<T>(array: T[]): T[] {
 }
 
 /**
- * Main Monte Carlo simulation for Ultimate Texas Hold'em.
- * 
- * Process:
- * 1. Remove known cards from deck
- * 2. For each iteration:
- *    - Generate random dealer hole cards
- *    - Fill community cards to 5 total
- *    - Evaluate best 5-card hands for player and dealer
- *    - Compare hands and record result
- * 3. Calculate percentages from all iterations
- * 
- * @param knownCards Array of known cards (player hole + community)
- * @param iterations Number of simulations to run (default: 1000)
- * @returns Promise resolving to simulation results
+ * Process a batch of Monte Carlo iterations
+ * This allows us to break up the work and yield control back to the browser
  */
-export async function monteCarloSimulation(
+function processBatch(
   knownCards: string[],
-  iterations: number = 1000
-): Promise<SimulationResult> {
-  
-  // Validate input
-  if (knownCards.length < 2) {
-    throw new Error("Need at least 2 cards (hole cards) for simulation");
-  }
-  
-  if (knownCards.length > 7) {
-    throw new Error("Too many cards selected (max 7: 2 hole + 5 community)");
-  }
-
-  // Create deck without known cards
-  const remainingDeck = generateDeck().filter(card => !knownCards.includes(card));
-  
-  if (remainingDeck.length < 7) {
-    throw new Error("Not enough cards remaining in deck");
-  }
-
+  remainingDeck: string[],
+  batchSize: number
+): { wins: number; ties: number; losses: number; processed: number } {
   let wins = 0;
   let ties = 0;
   let losses = 0;
-  let validIterations = 0;
+  let processed = 0;
 
-  // Run Monte Carlo iterations
-  for (let i = 0; i < iterations; i++) {
+  const playerHole = knownCards.slice(0, 2);
+  const existingCommunity = knownCards.slice(2);
+  const communityNeeded = 5 - existingCommunity.length;
+
+  for (let i = 0; i < batchSize; i++) {
     try {
       // Shuffle remaining deck for this iteration
       const shuffled = shuffleArray(remainingDeck);
       
-      // Extract player hole cards (first 2 of known cards)
-      const playerHole = knownCards.slice(0, 2);
-      
       // Generate dealer hole cards (first 2 from shuffled deck)
       const dealerHole = shuffled.slice(0, 2);
-      
-      // Determine community cards
-      const existingCommunity = knownCards.slice(2); // Community cards already selected
-      const communityNeeded = 5 - existingCommunity.length;
       
       // Fill community cards from shuffled deck (after dealer hole cards)
       const additionalCommunity = shuffled.slice(2, 2 + communityNeeded);
@@ -141,7 +109,7 @@ export async function monteCarloSimulation(
         losses++;
       }
       
-      validIterations++;
+      processed++;
       
     } catch (error) {
       console.warn(`Error in Monte Carlo iteration ${i}:`, error);
@@ -150,19 +118,83 @@ export async function monteCarloSimulation(
     }
   }
 
+  return { wins, ties, losses, processed };
+}
+
+/**
+ * Main Monte Carlo simulation for Ultimate Texas Hold'em.
+ * 
+ * Process:
+ * 1. Remove known cards from deck
+ * 2. Process iterations in batches to avoid blocking UI
+ * 3. Use setTimeout to yield control between batches
+ * 4. Calculate percentages from all iterations
+ * 
+ * @param knownCards Array of known cards (player hole + community)
+ * @param iterations Number of simulations to run (default: 1000)
+ * @returns Promise resolving to simulation results
+ */
+export async function monteCarloSimulation(
+  knownCards: string[],
+  iterations: number = 1000
+): Promise<SimulationResult> {
+  
+  // Validate input
+  if (knownCards.length < 2) {
+    throw new Error("Need at least 2 cards (hole cards) for simulation");
+  }
+  
+  if (knownCards.length > 7) {
+    throw new Error("Too many cards selected (max 7: 2 hole + 5 community)");
+  }
+
+  // Create deck without known cards
+  const remainingDeck = generateDeck().filter(card => !knownCards.includes(card));
+  
+  if (remainingDeck.length < 7) {
+    throw new Error("Not enough cards remaining in deck");
+  }
+
+  let totalWins = 0;
+  let totalTies = 0;
+  let totalLosses = 0;
+  let totalProcessed = 0;
+
+  // Process in batches to avoid blocking the UI
+  const batchSize = 50; // Process 50 iterations at a time
+  const totalBatches = Math.ceil(iterations / batchSize);
+
+  for (let batch = 0; batch < totalBatches; batch++) {
+    const remainingIterations = iterations - (batch * batchSize);
+    const currentBatchSize = Math.min(batchSize, remainingIterations);
+
+    // Process this batch
+    const batchResult = processBatch(knownCards, remainingDeck, currentBatchSize);
+    
+    totalWins += batchResult.wins;
+    totalTies += batchResult.ties;
+    totalLosses += batchResult.losses;
+    totalProcessed += batchResult.processed;
+
+    // Yield control back to the browser between batches
+    if (batch < totalBatches - 1) {
+      await new Promise(resolve => setTimeout(resolve, 0));
+    }
+  }
+
   // Ensure we have valid results
-  if (validIterations === 0) {
+  if (totalProcessed === 0) {
     throw new Error("No valid iterations completed");
   }
 
   // Calculate percentages
-  const total = validIterations;
+  const total = totalProcessed;
 
   return {
-    win: (wins / total) * 100,
-    tie: (ties / total) * 100,
-    lose: (losses / total) * 100,
-    iterations: validIterations
+    win: (totalWins / total) * 100,
+    tie: (totalTies / total) * 100,
+    lose: (totalLosses / total) * 100,
+    iterations: totalProcessed
   };
 }
 

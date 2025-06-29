@@ -35,6 +35,7 @@ export default function App() {
   const [isPending, startTransition] = useTransition();
   const [isSimulating, setIsSimulating] = useState(false);
   const [fastMode, setFastMode] = useState(true);
+  const [simulationError, setSimulationError] = useState<string | null>(null);
 
   // Derived state
   const gameStage = getGameStage(selectedCards.length);
@@ -53,6 +54,9 @@ export default function App() {
    * Update advice and run simulation when cards change
    */
   useEffect(() => {
+    // Clear any previous errors
+    setSimulationError(null);
+
     if (selectedCards.length < 2) {
       setAdvice({
         action: "Select your 2 hole cards to begin",
@@ -93,22 +97,26 @@ export default function App() {
       stage: gameStage
     });
     
+    // Use startTransition to mark this as a non-urgent update
     startTransition(() => {
       const simulationFunction = fastMode ? quickSimulation : monteCarloSimulation;
       const iterations = fastMode ? 300 : 1000;
       
+      // Run simulation asynchronously
       simulationFunction(selectedCards, iterations)
         .then((result) => {
           setSimulationResult(result);
           const postflopAdvice = getPostflopAdvice(result.win, gameStage);
           setAdvice(postflopAdvice);
+          setSimulationError(null);
         })
         .catch((error) => {
           console.error("Simulation error:", error);
+          setSimulationError(error.message || "Unknown error occurred");
           setAdvice({
-            action: "Error running simulation",
+            action: "⚠️ Simulation Error",
             confidence: 'low',
-            reasoning: "Please try again",
+            reasoning: "Please try selecting different cards",
             stage: gameStage
           });
         })
@@ -124,6 +132,7 @@ export default function App() {
   const handleReset = () => {
     setSelectedCards([]);
     setSimulationResult(null);
+    setSimulationError(null);
     setAdvice({
       action: "Select your 2 hole cards to begin",
       confidence: 'low',
@@ -138,7 +147,9 @@ export default function App() {
   const getAdviceStyle = (advice: BettingAdvice): string => {
     const action = advice.action.toLowerCase();
     
-    if (action.includes("4x") || action.includes("3x")) {
+    if (action.includes("error")) {
+      return "text-red-400 bg-red-900/20 border-red-500";
+    } else if (action.includes("4x") || action.includes("3x")) {
       return "text-green-400 bg-green-900/20 border-green-500";
     } else if (action.includes("2x")) {
       return "text-yellow-400 bg-yellow-900/20 border-yellow-500";
@@ -237,8 +248,17 @@ export default function App() {
             </div>
           </div>
 
+          {/* Error Display */}
+          {simulationError && (
+            <div className="mt-4 p-3 bg-red-900/20 border border-red-500 rounded-lg">
+              <p className="text-sm text-red-400 font-medium">⚠️ Simulation Error:</p>
+              <p className="text-xs text-red-300 mt-1">{simulationError}</p>
+              <p className="text-xs text-gray-400 mt-2">Try selecting different cards or refresh the page.</p>
+            </div>
+          )}
+
           {/* Strategy Notes */}
-          {selectedCards.length >= 2 && (
+          {selectedCards.length >= 2 && !simulationError && (
             <div className="mt-4 p-3 bg-gray-700/50 rounded-lg border border-gray-600">
               <p className="text-sm font-medium text-gray-300 mb-2">💡 Strategy Notes:</p>
               <ul className="text-xs space-y-1 text-gray-300">
@@ -366,7 +386,7 @@ export default function App() {
               </div>
             )}
 
-            {simulationResult && !isSimulating && !isPending && (
+            {simulationResult && !isSimulating && !isPending && !simulationError && (
               <div className="space-y-3">
                 <ProgressBar 
                   label="Win Probability" 
@@ -398,7 +418,21 @@ export default function App() {
               </div>
             )}
 
-            {!simulationResult && !isSimulating && !isPending && selectedCards.length < 5 && (
+            {simulationError && (
+              <div className="text-center py-8 text-red-400">
+                <div className="text-4xl mb-3">⚠️</div>
+                <p className="text-base font-medium">Simulation Error</p>
+                <p className="text-sm mt-2">{simulationError}</p>
+                <button
+                  onClick={handleReset}
+                  className="mt-4 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm"
+                >
+                  Reset and Try Again
+                </button>
+              </div>
+            )}
+
+            {!simulationResult && !isSimulating && !isPending && selectedCards.length < 5 && !simulationError && (
               <div className="text-center py-8 text-gray-500">
                 <Calculator className="h-12 w-12 mx-auto mb-3 opacity-50" />
                 <p className="text-base font-medium">Select at least 5 cards</p>
