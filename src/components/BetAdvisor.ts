@@ -156,38 +156,73 @@ export function getPreflopAdvice(holeCards: string[]): BettingAdvice {
 /**
  * Post-flop betting advice based on Monte Carlo win percentage.
  * 
+ * FIXED: Added comprehensive logging and better logic flow
+ * 
  * Ultimate Texas Hold'em Post-flop Strategy:
- * - Bet 3x with strong hands (60%+ win rate)
- * - Bet 2x or Check with decent hands (40-60% win rate)
- * - Fold with very weak hands (<40% win rate)
+ * - Bet 3x with strong hands (65%+ win rate)
+ * - Bet 2x with decent hands (45-65% win rate)  
+ * - Check with marginal hands (35-45% win rate)
+ * - Fold with very weak hands (<35% win rate)
  * 
  * @param winPercent Win percentage from Monte Carlo simulation
  * @param stage Current game stage
  * @returns Betting advice object
  */
 export function getPostflopAdvice(winPercent: number, stage: GameStage = 'flop'): BettingAdvice {
-  if (winPercent > 60) {
+  console.log(`🎯 Getting postflop advice: ${winPercent.toFixed(1)}% win rate, stage: ${stage}`);
+  
+  // Validate input
+  if (typeof winPercent !== 'number' || isNaN(winPercent)) {
+    console.error('❌ Invalid win percentage:', winPercent);
     return {
-      action: "Bet 3x (Strong Position)",
-      confidence: 'high',
-      reasoning: `${winPercent.toFixed(1)}% win rate is excellent`,
-      stage
-    };
-  } else if (winPercent > 40) {
-    return {
-      action: "Bet 2x or Check (Decent Chance)",
-      confidence: 'medium',
-      reasoning: `${winPercent.toFixed(1)}% win rate is playable`,
-      stage
-    };
-  } else {
-    return {
-      action: "Fold (Too Risky)",
-      confidence: 'high',
-      reasoning: `${winPercent.toFixed(1)}% win rate is too low`,
+      action: "Error: Invalid win percentage",
+      confidence: 'low',
+      reasoning: "Simulation returned invalid data",
       stage
     };
   }
+
+  // Very strong hands (65%+ win rate) - Bet 3x
+  if (winPercent >= 65) {
+    console.log('✅ Strong hand detected - recommending 3x bet');
+    return {
+      action: "🚀 Bet 3x (Excellent Hand!)",
+      confidence: 'high',
+      reasoning: `${winPercent.toFixed(1)}% win rate is excellent - maximize value`,
+      stage
+    };
+  }
+  
+  // Good hands (45-65% win rate) - Bet 2x
+  if (winPercent >= 45) {
+    console.log('✅ Good hand detected - recommending 2x bet');
+    return {
+      action: "💪 Bet 2x (Strong Position)",
+      confidence: 'high',
+      reasoning: `${winPercent.toFixed(1)}% win rate gives you an edge`,
+      stage
+    };
+  }
+  
+  // Marginal hands (35-45% win rate) - Check
+  if (winPercent >= 35) {
+    console.log('⚠️ Marginal hand detected - recommending check');
+    return {
+      action: "🤔 Check (Marginal Hand)",
+      confidence: 'medium',
+      reasoning: `${winPercent.toFixed(1)}% win rate - see more cards for free`,
+      stage
+    };
+  }
+  
+  // Weak hands (<35% win rate) - Fold
+  console.log('❌ Weak hand detected - recommending fold');
+  return {
+    action: "🛑 Fold (Too Risky)",
+    confidence: 'high',
+    reasoning: `${winPercent.toFixed(1)}% win rate is too low to continue`,
+    stage
+  };
 }
 
 /**
