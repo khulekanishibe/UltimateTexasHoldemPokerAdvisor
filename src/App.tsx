@@ -270,7 +270,7 @@ export default function App() {
       <div className="h-[calc(100vh-140px)] p-4">
         <div className="h-full grid grid-cols-12 grid-rows-12 gap-3">
           
-          {/* Betting Advice - Top (Narrower) */}
+          {/* Betting Advice - Top Center */}
           <div className="col-span-8 row-span-4 bg-gray-800/90 backdrop-blur-sm rounded-xl p-4 border border-gray-700 shadow-xl">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-lg font-bold flex items-center gap-2">
@@ -345,7 +345,7 @@ export default function App() {
           <div className="col-span-4 row-span-4 bg-gray-800/90 backdrop-blur-sm rounded-xl p-4 border border-gray-700 shadow-xl">
             <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
               <TrendingUp className="h-3 w-3 text-yellow-500" />
-              Monte Carlo
+              Monte Carlo Simulation
               {fastMode && <span className="text-xs bg-green-600 px-1 py-0.5 rounded">FAST</span>}
             </h3>
 
@@ -408,7 +408,7 @@ export default function App() {
               </div>
             )}
 
-            {/* AI Advisor Component - Now integrated here */}
+            {/* AI Advisor Component - Integrated in same box */}
             <div className="border-t border-gray-600 pt-3">
               <OpenAIAdvisor 
                 selectedCards={selectedCards}
@@ -489,7 +489,7 @@ export default function App() {
             </div>
           </div>
 
-          {/* Card Picker - Center */}
+          {/* Card Picker - Center (Expanded) */}
           <div className="col-span-9 row-span-8 bg-gray-800/90 backdrop-blur-sm rounded-xl p-3 border border-gray-700 shadow-xl overflow-hidden">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
