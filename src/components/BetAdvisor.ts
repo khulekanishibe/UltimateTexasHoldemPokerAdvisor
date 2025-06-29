@@ -1,12 +1,14 @@
 /**
  * Betting advice system for Ultimate Texas Hold'em.
- * Provides strategic recommendations based on game stage and hand strength.
+ * Provides strategic recommendations based on pre-flop hand strength
+ * and post-flop Monte Carlo simulation results.
  */
 
 /**
  * Pre-flop betting advice based on hole cards strength.
  * Uses standard Ultimate Texas Hold'em strategy:
  * - Bet 4x with strong hands (pairs, A-x suited, Broadway cards)
+ * - Bet 2x with decent hands
  * - Check with marginal hands to see the flop
  * 
  * @param holeCards Array of exactly 2 hole cards
@@ -43,13 +45,13 @@ export function getPreflopAdvice(holeCards: string[]): string {
     if (suited) {
       return "🔥 Bet 4x - Broadway suited is premium!";
     } else {
-      return "🔥 Bet 4x - Strong Broadway cards";
+      return "💪 Bet 2x - Strong Broadway cards";
     }
   }
 
   // K-x suited
   if ((rank1 === 'K' || rank2 === 'K') && suited) {
-    return "🔥 Bet 4x - King suited has potential";
+    return "💪 Bet 2x - King suited has potential";
   }
 
   // Q-x suited (Q-6 or better)
@@ -57,13 +59,13 @@ export function getPreflopAdvice(holeCards: string[]): string {
     const otherRank = rank1 === 'Q' ? rank2 : rank1;
     const rankOrder = ['2','3','4','5','6','7','8','9','T','J','Q','K','A'];
     if (rankOrder.indexOf(otherRank) >= 4) { // 6 or better
-      return "🔥 Bet 4x - Queen suited with decent kicker";
+      return "💪 Bet 2x - Queen suited with decent kicker";
     }
   }
 
   // High offsuit hands
   if (ranks.includes('A') && ranks.includes('K')) {
-    return "🔥 Bet 4x - Ace-King offsuit is playable";
+    return "💪 Bet 2x - Ace-King offsuit is playable";
   }
 
   // Default: check and see the flop
@@ -71,55 +73,25 @@ export function getPreflopAdvice(holeCards: string[]): string {
 }
 
 /**
- * Flop betting advice based on Monte Carlo win percentage.
- * At the flop, players can bet 2x or check.
+ * Post-flop betting advice based on Monte Carlo win percentage.
+ * Uses win rate thresholds to determine optimal betting strategy.
  * 
  * @param winPercent Win percentage from Monte Carlo simulation
- * @returns Betting advice string
+ * @returns Betting advice string with reasoning
  */
-export function getFlopAdvice(winPercent: number): string {
-  if (winPercent > 65) {
-    return "🔥 Bet 2x - Excellent hand with high win rate!";
+export function getPostflopAdvice(winPercent: number): string {
+  if (winPercent > 70) {
+    return "🔥 Bet 4x - Excellent hand with high win rate!";
+  } else if (winPercent > 60) {
+    return "🔥 Bet 4x - Strong hand, bet for value!";
   } else if (winPercent > 50) {
-    return "💪 Bet 2x - Good hand, bet for value!";
-  } else if (winPercent > 35) {
-    return "⚖️ Check - Marginal hand, see the turn";
-  } else {
-    return "⏳ Check - Weak hand, hope to improve";
-  }
-}
-
-/**
- * Turn betting advice based on Monte Carlo win percentage.
- * At the turn, players can only check (no betting allowed).
- * 
- * @param winPercent Win percentage from Monte Carlo simulation
- * @returns Betting advice string
- */
-export function getTurnAdvice(winPercent: number): string {
-  if (winPercent > 60) {
-    return "✅ Check - Strong hand, no betting allowed on turn";
+    return "💪 Bet 2x - Good hand, moderate bet is wise";
   } else if (winPercent > 40) {
-    return "⚖️ Check - Decent hand, see the river";
+    return "⚖️ Bet 2x or Check - Marginal hand, proceed carefully";
+  } else if (winPercent > 30) {
+    return "⏳ Check - Weak hand, see if you improve";
   } else {
-    return "⏳ Check - Weak hand, hope for river improvement";
-  }
-}
-
-/**
- * River betting advice based on Monte Carlo win percentage.
- * At the river, players can check or fold.
- * 
- * @param winPercent Win percentage from Monte Carlo simulation
- * @returns Betting advice string
- */
-export function getRiverAdvice(winPercent: number): string {
-  if (winPercent > 55) {
-    return "✅ Check - Good hand, likely to win";
-  } else if (winPercent > 35) {
-    return "⚖️ Check - Marginal hand, but worth seeing showdown";
-  } else {
-    return "❌ Consider Folding - Very weak hand, likely to lose";
+    return "❌ Consider Folding - Very weak hand";
   }
 }
 
@@ -130,14 +102,14 @@ export function getRiverAdvice(winPercent: number): string {
  * @returns CSS class string for styling
  */
 export function getAdviceStyle(advice: string): string {
-  if (advice.includes("Bet 4x") || advice.includes("Bet 2x")) {
+  if (advice.includes("Bet 4x")) {
     return "text-green-400 bg-green-900/20 border-green-500";
+  } else if (advice.includes("Bet 2x")) {
+    return "text-yellow-400 bg-yellow-900/20 border-yellow-500";
   } else if (advice.includes("Check")) {
     return "text-blue-400 bg-blue-900/20 border-blue-500";
   } else if (advice.includes("Fold")) {
     return "text-red-400 bg-red-900/20 border-red-500";
-  } else if (advice.includes("simulation")) {
-    return "text-yellow-400 bg-yellow-900/20 border-yellow-500";
   } else {
     return "text-gray-400 bg-gray-900/20 border-gray-500";
   }

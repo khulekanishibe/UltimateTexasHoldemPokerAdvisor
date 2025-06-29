@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useTransition } from "react";
+import React, { useState, useEffect } from "react";
 import { Spade as Spades, TrendingUp, Calculator, Target } from "lucide-react";
 import CardPicker, { Card } from "./components/CardPicker";
 import { evaluateHand, formatCards } from "./components/HandEvaluator";
-import { getPreflopAdvice, getFlopAdvice, getTurnAdvice, getRiverAdvice, getAdviceStyle } from "./components/BetAdvisor";
+import { getPreflopAdvice, getPostflopAdvice, getAdviceStyle } from "./components/BetAdvisor";
 import { monteCarloSimulation } from "./utils/monteCarlo";
 
 interface SimulationResult {
@@ -11,23 +11,11 @@ interface SimulationResult {
   lose: number;
 }
 
-type GameStage = 'preflop' | 'flop' | 'turn' | 'river';
-
 export default function App() {
   const [selectedCards, setSelectedCards] = useState<Card[]>([]);
   const [simulationResult, setSimulationResult] = useState<SimulationResult | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const [isSimulating, setIsSimulating] = useState(false);
   const [advice, setAdvice] = useState<string>("Select your 2 hole cards to begin");
-  const [gameStage, setGameStage] = useState<GameStage>('preflop');
-
-  // Determine current game stage based on card count
-  const getCurrentStage = (cardCount: number): GameStage => {
-    if (cardCount < 2) return 'preflop';
-    if (cardCount < 5) return 'preflop';
-    if (cardCount === 5) return 'flop';
-    if (cardCount === 6) return 'turn';
-    return 'river';
-  };
 
   // Get current hand description if enough cards are selected
   const handDescription = selectedCards.length >= 5 
@@ -39,13 +27,13 @@ export default function App() {
   // Get tip message based on current state
   const getTipMessage = (): string => {
     if (selectedCards.length === 0 || selectedCards.length === 1) {
-      return "🃏 Tip: Select your 2 hole cards first, then Flop (3), Turn (1), and River (1)";
+      return "Tip: Select your 2 hole cards to begin.";
     } else if (selectedCards.length === 2) {
-      return "🃏 Tip: Now add Flop cards (3 cards).";
+      return "Tip: Now add Flop cards (3 cards).";
     } else if (selectedCards.length >= 5) {
-      return "🃏 Tip: Full board detected. Monte Carlo odds are running.";
+      return "Tip: Full board detected. Monte Carlo odds are running.";
     } else {
-      return "🃏 Tip: Add more community cards to complete the board.";
+      return "Tip: Add more community cards to complete the board.";
     }
   };
 
@@ -54,14 +42,10 @@ export default function App() {
     setSelectedCards([]);
     setSimulationResult(null);
     setAdvice("Select your 2 hole cards to begin");
-    setGameStage('preflop');
   };
 
   // Update advice and run simulation when cards change
   useEffect(() => {
-    const stage = getCurrentStage(selectedCards.length);
-    setGameStage(stage);
-
     if (selectedCards.length < 2) {
       setAdvice("Select your 2 hole cards to begin");
       setSimulationResult(null);
@@ -83,27 +67,21 @@ export default function App() {
     }
 
     // Run Monte Carlo simulation for post-flop advice
-    startTransition(() => {
-      setAdvice("🎲 Running simulation...");
-      
-      monteCarloSimulation(selectedCards, 1000)
-        .then((result) => {
-          setSimulationResult(result);
-          
-          // Set advice based on game stage and win percentage
-          if (stage === 'flop') {
-            setAdvice(getFlopAdvice(result.win));
-          } else if (stage === 'turn') {
-            setAdvice(getTurnAdvice(result.win));
-          } else if (stage === 'river') {
-            setAdvice(getRiverAdvice(result.win));
-          }
-        })
-        .catch((error) => {
-          console.error("Simulation error:", error);
-          setAdvice("Error running simulation. Please try again.");
-        });
-    });
+    setIsSimulating(true);
+    setAdvice("🎲 Running simulation...");
+    
+    monteCarloSimulation(selectedCards, 1000)
+      .then((result) => {
+        setSimulationResult(result);
+        setAdvice(getPostflopAdvice(result.win));
+      })
+      .catch((error) => {
+        console.error("Simulation error:", error);
+        setAdvice("Error running simulation. Please try again.");
+      })
+      .finally(() => {
+        setIsSimulating(false);
+      });
   }, [selectedCards]);
 
   // Progress bar component
@@ -148,32 +126,6 @@ export default function App() {
       </div>
 
       <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
-        {/* Betting Advice - MOVED TO TOP */}
-        {selectedCards.length >= 2 && (
-          <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
-            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <Target className="h-5 w-5 text-green-400" />
-              Betting Advice - {gameStage.charAt(0).toUpperCase() + gameStage.slice(1)} Stage
-            </h3>
-            
-            <div className={`p-4 rounded-lg border-2 ${getAdviceStyle(advice)}`}>
-              <p className="text-xl font-bold text-center">
-                {isPending ? "🎲 Running simulation..." : advice}
-              </p>
-            </div>
-
-            <div className="mt-4 p-3 bg-gray-700/50 rounded-lg">
-              <p className="text-sm text-gray-400 mb-2">Strategy Notes:</p>
-              <ul className="text-sm space-y-1 text-gray-300">
-                <li>• Pre-flop: Bet 4x with pairs, A-x suited, or Broadway cards</li>
-                <li>• Flop: Bet 2x with 50%+ win rate, Check with 30-50%</li>
-                <li>• Turn: Check only (no betting allowed)</li>
-                <li>• River: Check or Fold based on final odds</li>
-              </ul>
-            </div>
-          </div>
-        )}
-
         {/* Card Picker */}
         <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
           <div className="flex items-center gap-2 mb-4">
@@ -193,13 +145,6 @@ export default function App() {
             </h3>
             
             <div className="space-y-4">
-              <div>
-                <p className="text-sm text-gray-400 mb-1">Game Stage</p>
-                <p className="font-semibold text-lg text-blue-400 capitalize">
-                  {gameStage} ({selectedCards.length} cards)
-                </p>
-              </div>
-
               <div>
                 <p className="text-sm text-gray-400 mb-1">Selected Cards</p>
                 <p className="font-mono text-lg">
@@ -231,6 +176,31 @@ export default function App() {
                   {handDescription}
                 </p>
               </div>
+
+              {/* Betting Advice - Moved to top of results */}
+              <div className="mt-6 pt-4 border-t border-gray-600">
+                <h4 className="text-md font-semibold mb-3 flex items-center gap-2">
+                  <Target className="h-4 w-4 text-green-400" />
+                  Betting Advice
+                </h4>
+                
+                <div className={`p-3 rounded-lg border-2 ${getAdviceStyle(advice)}`}>
+                  <p className="text-xl font-bold text-center">
+                    {advice}
+                  </p>
+                </div>
+
+                {selectedCards.length >= 2 && (
+                  <div className="mt-3 p-2 bg-gray-700/50 rounded text-xs text-gray-300">
+                    <p className="font-medium mb-1">Strategy Notes:</p>
+                    <ul className="space-y-0.5">
+                      <li>• Pre-flop: Bet 4x with pairs, A-x suited, or Broadway cards</li>
+                      <li>• Post-flop: Bet 4x with 60%+ win rate, 2x with 40-60%</li>
+                      <li>• Consider folding with less than 30% win probability</li>
+                    </ul>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -241,14 +211,14 @@ export default function App() {
               Monte Carlo Simulation
             </h3>
 
-            {isPending && (
+            {isSimulating && (
               <div className="flex items-center justify-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-400"></div>
                 <span className="ml-3 text-gray-400">Running 1000 simulations...</span>
               </div>
             )}
 
-            {simulationResult && !isPending && (
+            {simulationResult && !isSimulating && (
               <div className="space-y-4">
                 <ProgressBar 
                   label="Win Probability" 
@@ -272,7 +242,7 @@ export default function App() {
               </div>
             )}
 
-            {!simulationResult && !isPending && selectedCards.length < 5 && (
+            {!simulationResult && !isSimulating && selectedCards.length < 5 && (
               <div className="text-center py-8 text-gray-500">
                 Select at least 5 cards to run simulation
               </div>
