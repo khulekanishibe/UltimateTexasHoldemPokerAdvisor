@@ -3,8 +3,8 @@ import { Hand } from "pokersolver";
 /**
  * Monte Carlo Simulation Module for Ultimate Texas Hold'em
  * 
- * Runs statistical simulations to calculate win/tie/lose probabilities
- * by generating thousands of random scenarios and comparing final hands.
+ * Completely rewritten for reliability and performance.
+ * Uses a simple, direct approach without complex async patterns.
  */
 
 // All possible ranks and suits for deck generation
@@ -30,19 +30,13 @@ function convertCardForSolver(card: string): string {
 
 /**
  * Generate complete 52-card deck
- * 
- * @returns Array of all 52 cards
  */
 function generateDeck(): string[] {
   return allRanks.flatMap(r => allSuits.map(s => `${r}${s}`));
 }
 
 /**
- * Fisher-Yates shuffle algorithm for array randomization
- * Ensures uniform distribution of random outcomes
- * 
- * @param array Array to shuffle
- * @returns New shuffled array
+ * Simple Fisher-Yates shuffle
  */
 function shuffleArray<T>(array: T[]): T[] {
   const shuffled = [...array];
@@ -54,137 +48,114 @@ function shuffleArray<T>(array: T[]): T[] {
 }
 
 /**
- * Main Monte Carlo simulation for Ultimate Texas Hold'em.
- * 
- * Simplified and optimized version that processes all iterations synchronously
- * but yields control periodically to prevent UI blocking.
- * 
- * @param knownCards Array of known cards (player hole + community)
- * @param iterations Number of simulations to run (default: 1000)
- * @returns Promise resolving to simulation results
+ * Completely rewritten Monte Carlo simulation.
+ * Simple, synchronous approach with minimal complexity.
  */
 export async function monteCarloSimulation(
   knownCards: string[],
   iterations: number = 1000
 ): Promise<SimulationResult> {
   
-  // Validate input
-  if (!Array.isArray(knownCards) || knownCards.length < 2) {
-    throw new Error("Need at least 2 cards (hole cards) for simulation");
+  console.log(`🎯 Starting Monte Carlo with ${knownCards.length} cards:`, knownCards);
+  
+  // Basic validation
+  if (!knownCards || knownCards.length < 2) {
+    throw new Error("Need at least 2 cards");
   }
   
   if (knownCards.length > 7) {
-    throw new Error("Too many cards selected (max 7: 2 hole + 5 community)");
+    throw new Error("Too many cards (max 7)");
   }
 
-  // Validate card format
-  const validCardRegex = /^(2|3|4|5|6|7|8|9|10|J|Q|K|A)[hdsc]$/;
-  for (const card of knownCards) {
-    if (!validCardRegex.test(card)) {
-      throw new Error(`Invalid card format: ${card}`);
-    }
-  }
-
-  // Check for duplicate cards
-  const uniqueCards = new Set(knownCards);
-  if (uniqueCards.size !== knownCards.length) {
-    throw new Error("Duplicate cards detected");
-  }
-
-  // Create deck without known cards
+  // Create remaining deck
   const fullDeck = generateDeck();
-  const remainingDeck = fullDeck.filter(card => !knownCards.includes(card));
+  const remainingCards = fullDeck.filter(card => !knownCards.includes(card));
   
-  if (remainingDeck.length < 7) {
-    throw new Error("Not enough cards remaining in deck");
+  console.log(`📦 Remaining deck size: ${remainingCards.length}`);
+  
+  if (remainingCards.length < 7) {
+    throw new Error("Not enough remaining cards");
   }
 
-  // Extract player hole cards and existing community cards
+  // Extract known cards
   const playerHole = knownCards.slice(0, 2);
-  const existingCommunity = knownCards.slice(2);
-  const communityNeeded = 5 - existingCommunity.length;
+  const communityCards = knownCards.slice(2);
+  const communityNeeded = Math.max(0, 5 - communityCards.length);
+  
+  console.log(`🃏 Player hole: ${playerHole.join(', ')}`);
+  console.log(`🏘️ Community: ${communityCards.join(', ')} (need ${communityNeeded} more)`);
 
   let wins = 0;
   let ties = 0;
   let losses = 0;
-  let validIterations = 0;
 
-  // Run iterations with periodic yielding
+  // Run simulations
   for (let i = 0; i < iterations; i++) {
     try {
-      // Shuffle remaining deck for this iteration
-      const shuffled = shuffleArray(remainingDeck);
+      // Shuffle deck
+      const shuffled = shuffleArray(remainingCards);
       
-      // Generate dealer hole cards (first 2 from shuffled deck)
+      // Deal dealer cards (first 2)
       const dealerHole = shuffled.slice(0, 2);
       
-      // Fill community cards from shuffled deck (after dealer hole cards)
+      // Complete community cards if needed
       const additionalCommunity = shuffled.slice(2, 2 + communityNeeded);
-      const fullCommunity = [...existingCommunity, ...additionalCommunity];
+      const fullCommunity = [...communityCards, ...additionalCommunity];
       
-      // Create final hands (best 5 from 7 cards)
-      const playerCards = [...playerHole, ...fullCommunity];
-      const dealerCards = [...dealerHole, ...fullCommunity];
+      // Create 7-card hands
+      const playerHand = [...playerHole, ...fullCommunity];
+      const dealerHand = [...dealerHole, ...fullCommunity];
       
-      // Convert cards to pokersolver format (10 -> T)
-      const playerSolverCards = playerCards.map(convertCardForSolver);
-      const dealerSolverCards = dealerCards.map(convertCardForSolver);
+      // Convert to pokersolver format
+      const playerSolver = playerHand.map(convertCardForSolver);
+      const dealerSolver = dealerHand.map(convertCardForSolver);
       
-      // Evaluate hands using pokersolver
-      const playerHand = Hand.solve(playerSolverCards);
-      const dealerHand = Hand.solve(dealerSolverCards);
+      // Evaluate hands
+      const playerResult = Hand.solve(playerSolver);
+      const dealerResult = Hand.solve(dealerSolver);
       
-      // Determine winner
-      const winners = Hand.winners([playerHand, dealerHand]);
+      // Compare hands
+      const winners = Hand.winners([playerResult, dealerResult]);
       
       if (winners.length === 2) {
-        // Tie
         ties++;
-      } else if (winners[0] === playerHand) {
-        // Player wins
+      } else if (winners[0] === playerResult) {
         wins++;
       } else {
-        // Dealer wins
         losses++;
       }
       
-      validIterations++;
-      
     } catch (error) {
-      console.warn(`Error in Monte Carlo iteration ${i}:`, error);
-      // Skip this iteration on error but continue
+      console.warn(`Iteration ${i} failed:`, error);
       continue;
     }
-
-    // Yield control every 50 iterations to keep UI responsive
-    if (i % 50 === 0 && i > 0) {
-      await new Promise(resolve => setTimeout(resolve, 0));
+    
+    // Yield every 100 iterations
+    if (i > 0 && i % 100 === 0) {
+      await new Promise(resolve => setTimeout(resolve, 1));
     }
   }
 
-  // Ensure we have valid results
-  if (validIterations === 0) {
-    throw new Error("No valid iterations completed");
+  const total = wins + ties + losses;
+  
+  if (total === 0) {
+    throw new Error("No valid simulations completed");
   }
 
-  // Calculate percentages
-  const total = validIterations;
-
-  return {
+  const result = {
     win: (wins / total) * 100,
     tie: (ties / total) * 100,
     lose: (losses / total) * 100,
-    iterations: validIterations
+    iterations: total
   };
+  
+  console.log(`✅ Simulation complete:`, result);
+  
+  return result;
 }
 
 /**
- * Quick simulation with fewer iterations for faster results.
- * Useful for real-time updates during card selection.
- * 
- * @param knownCards Array of known cards
- * @param iterations Number of iterations (default: 300)
- * @returns Promise resolving to simulation results
+ * Quick simulation with fewer iterations
  */
 export async function quickSimulation(knownCards: string[], iterations: number = 300): Promise<SimulationResult> {
   return monteCarloSimulation(knownCards, iterations);

@@ -37,7 +37,7 @@ export default function App() {
   const [simulationError, setSimulationError] = useState<string | null>(null);
 
   // Ref to track current simulation to prevent race conditions
-  const currentSimulationRef = useRef<string | null>(null);
+  const currentSimulationRef = useRef<number>(0);
 
   // Derived state
   const gameStage = getGameStage(selectedCards.length);
@@ -56,8 +56,14 @@ export default function App() {
    * Update advice and run simulation when cards change
    */
   useEffect(() => {
-    // Clear any previous errors
+    console.log(`🔄 Cards changed: ${selectedCards.length} cards`, selectedCards);
+    
+    // Clear previous state
     setSimulationError(null);
+    
+    // Increment simulation counter to cancel any running simulations
+    currentSimulationRef.current += 1;
+    const thisSimulation = currentSimulationRef.current;
 
     if (selectedCards.length < 2) {
       setAdvice({
@@ -68,7 +74,6 @@ export default function App() {
       });
       setSimulationResult(null);
       setIsSimulating(false);
-      currentSimulationRef.current = null;
       return;
     }
 
@@ -78,7 +83,6 @@ export default function App() {
       setAdvice(preflopAdvice);
       setSimulationResult(null);
       setIsSimulating(false);
-      currentSimulationRef.current = null;
       return;
     }
 
@@ -92,56 +96,49 @@ export default function App() {
       });
       setSimulationResult(null);
       setIsSimulating(false);
-      currentSimulationRef.current = null;
       return;
     }
 
-    // Create unique simulation ID to prevent race conditions
-    const simulationId = `${selectedCards.join('')}-${Date.now()}`;
-    currentSimulationRef.current = simulationId;
-
-    // Run Monte Carlo simulation for post-flop advice
+    // Run Monte Carlo simulation for 5+ cards
     setIsSimulating(true);
     setAdvice({
-      action: "🕐 Calculating odds...",
+      action: "🎲 Analyzing your hand...",
       confidence: 'medium',
-      reasoning: "Running Monte Carlo simulation",
+      reasoning: "Running probability calculations",
       stage: gameStage
     });
     
-    // Run simulation asynchronously
+    // Run simulation
     const runSimulation = async () => {
       try {
-        console.log(`Starting simulation ${simulationId} with ${selectedCards.length} cards:`, selectedCards);
+        console.log(`🚀 Starting simulation #${thisSimulation}`);
         
-        const simulationFunction = fastMode ? quickSimulation : monteCarloSimulation;
         const iterations = fastMode ? 300 : 1000;
+        const simulationFunction = fastMode ? quickSimulation : monteCarloSimulation;
         
         const result = await simulationFunction(selectedCards, iterations);
         
-        console.log(`Simulation ${simulationId} completed:`, result);
-        
-        // Only update if this is still the current simulation
-        if (currentSimulationRef.current === simulationId) {
+        // Only update if this simulation is still current
+        if (currentSimulationRef.current === thisSimulation) {
+          console.log(`✅ Simulation #${thisSimulation} completed successfully`);
           setSimulationResult(result);
           const postflopAdvice = getPostflopAdvice(result.win, gameStage);
           setAdvice(postflopAdvice);
-          setSimulationError(null);
           setIsSimulating(false);
-          console.log(`Updated UI for simulation ${simulationId}`);
         } else {
-          console.log(`Simulation ${simulationId} was superseded, ignoring results`);
+          console.log(`❌ Simulation #${thisSimulation} was superseded`);
         }
-      } catch (error) {
-        console.error(`Simulation ${simulationId} error:`, error);
         
-        // Only update if this is still the current simulation
-        if (currentSimulationRef.current === simulationId) {
-          setSimulationError(error.message || "Unknown error occurred");
+      } catch (error) {
+        console.error(`💥 Simulation #${thisSimulation} failed:`, error);
+        
+        // Only update if this simulation is still current
+        if (currentSimulationRef.current === thisSimulation) {
+          setSimulationError(error.message || "Unknown simulation error");
           setAdvice({
-            action: "⚠️ Simulation Error",
+            action: "⚠️ Calculation Error",
             confidence: 'low',
-            reasoning: "Please try selecting different cards",
+            reasoning: "Unable to calculate probabilities",
             stage: gameStage
           });
           setIsSimulating(false);
@@ -149,14 +146,20 @@ export default function App() {
       }
     };
 
-    runSimulation();
+    // Start simulation with small delay to prevent rapid firing
+    const timeoutId = setTimeout(runSimulation, 100);
+    
+    return () => {
+      clearTimeout(timeoutId);
+    };
+    
   }, [selectedCards, gameStage, holeCards, fastMode]);
 
   /**
    * Reset all state
    */
   const handleReset = () => {
-    currentSimulationRef.current = null;
+    currentSimulationRef.current += 1; // Cancel any running simulation
     setSelectedCards([]);
     setSimulationResult(null);
     setSimulationError(null);
@@ -286,7 +289,12 @@ export default function App() {
             <div className="mt-4 p-3 bg-red-900/20 border border-red-500 rounded-lg">
               <p className="text-sm text-red-400 font-medium">⚠️ Simulation Error:</p>
               <p className="text-xs text-red-300 mt-1">{simulationError}</p>
-              <p className="text-xs text-gray-400 mt-2">Try selecting different cards or refresh the page.</p>
+              <button
+                onClick={handleReset}
+                className="mt-2 bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-xs"
+              >
+                Reset and Try Again
+              </button>
             </div>
           )}
 
