@@ -6,6 +6,11 @@ export type Card = `${'2'|'3'|'4'|'5'|'6'|'7'|'8'|'9'|'T'|'J'|'Q'|'K'|'A'}${'h'|
 const allRanks = ['2','3','4','5','6','7','8','9','T','J','Q','K','A'];
 const allSuits = ['h','d','s','c'];
 
+// Convert rank for display (T becomes 10)
+function getDisplayRank(rank: string): string {
+  return rank === 'T' ? '10' : rank;
+}
+
 // Convert suit letter to symbol
 function getSuitSymbol(suit: string): string {
   switch (suit) {
@@ -95,6 +100,7 @@ export default function CardPicker({ onSelect, onReset }: CardPickerProps) {
                 const card = `${rank}${suit}` as Card;
                 const isSelected = selected.includes(card);
                 const isDisabled = selected.length >= 7 && !isSelected;
+                const displayRank = getDisplayRank(rank);
                 
                 return (
                   <button
@@ -102,9 +108,10 @@ export default function CardPicker({ onSelect, onReset }: CardPickerProps) {
                     onClick={() => toggleCard(card)}
                     disabled={isDisabled}
                     className={`
-                      w-16 h-20 rounded-lg border-2 text-base font-bold p-3
+                      w-16 h-20 rounded-lg border-2 font-bold p-2
                       flex flex-col justify-center items-center
                       transition-all duration-200 transform hover:scale-105 hover:shadow-md
+                      ${rank === 'T' ? 'text-xs' : 'text-base'}
                       ${isSelected 
                         ? `bg-green-600 text-white border-2 border-green-800 shadow-lg` 
                         : `bg-white border-gray-400 hover:bg-gray-50 ${getSuitColor(suit)}`
@@ -115,10 +122,10 @@ export default function CardPicker({ onSelect, onReset }: CardPickerProps) {
                       }
                     `}
                     aria-pressed={isSelected}
-                    aria-label={`${rank} of ${getSuitName(suit)}`}
-                    title={`${rank}${getSuitSymbol(suit)}`}
+                    aria-label={`${displayRank} of ${getSuitName(suit)}`}
+                    title={`${displayRank}${getSuitSymbol(suit)}`}
                   >
-                    <span className="text-sm leading-none">{rank}</span>
+                    <span className="leading-none">{displayRank}</span>
                     <span className="text-xl leading-none">{getSuitSymbol(suit)}</span>
                   </button>
                 );
@@ -155,7 +162,7 @@ export default function CardPicker({ onSelect, onReset }: CardPickerProps) {
                   }
                 `}
               >
-                {card[0]}{getSuitSymbol(card[1])}
+                {getDisplayRank(card[0])}{getSuitSymbol(card[1])}
               </span>
             ))}
           </div>

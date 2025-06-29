@@ -41,7 +41,8 @@ export function getHandRank(cards: string[]): number {
 }
 
 /**
- * Formats card array for display with suit symbols.
+ * Formats card array for display with suit symbols and proper rank display.
+ * Converts 'T' to '10' for better readability.
  * 
  * @param cards Array of card strings
  * @returns Formatted string with suit symbols
@@ -50,7 +51,7 @@ export function formatCards(cards: string[]): string {
   const suitSymbols = { h: '♥', d: '♦', s: '♠', c: '♣' };
   
   return cards.map(card => {
-    const rank = card[0];
+    const rank = card[0] === 'T' ? '10' : card[0]; // Convert T to 10 for display
     const suit = card[1];
     const symbol = suitSymbols[suit as keyof typeof suitSymbols] || suit;
     return `${rank}${symbol}`;
