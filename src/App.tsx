@@ -270,8 +270,8 @@ export default function App() {
       <div className="h-[calc(100vh-140px)] p-4">
         <div className="h-full grid grid-cols-12 grid-rows-12 gap-3">
           
-          {/* Betting Advice - Top Center */}
-          <div className="col-span-8 row-span-4 bg-gray-800/90 backdrop-blur-sm rounded-xl p-4 border border-gray-700 shadow-xl">
+          {/* Betting Advice - Top Full Width */}
+          <div className="col-span-12 row-span-4 bg-gray-800/90 backdrop-blur-sm rounded-xl p-4 border border-gray-700 shadow-xl">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-lg font-bold flex items-center gap-2">
                 <Target className="h-4 w-4 text-yellow-500" />
@@ -341,17 +341,103 @@ export default function App() {
             )}
           </div>
 
-          {/* Monte Carlo + AI Advisor - Top Right */}
-          <div className="col-span-4 row-span-4 bg-gray-800/90 backdrop-blur-sm rounded-xl p-4 border border-gray-700 shadow-xl">
-            <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
+          {/* Hand Analysis - Left Side (Smaller) */}
+          <div className="col-span-2 row-span-8 bg-gray-800/90 backdrop-blur-sm rounded-xl p-3 border border-gray-700 shadow-xl">
+            <h3 className="text-xs font-bold mb-3 flex items-center gap-2">
+              <Spades className="h-3 w-3 text-yellow-500" />
+              Hand Analysis
+            </h3>
+            
+            <div className="space-y-3 text-xs">
+              <div>
+                <p className="text-gray-400 mb-1">Cards ({selectedCards.length}/7)</p>
+                <p className="font-mono text-xs text-white break-all">
+                  {selectedCards.length > 0 ? formatCards(selectedCards) : "None"}
+                </p>
+              </div>
+
+              {holeCards.length === 2 && (
+                <div>
+                  <p className="text-gray-400 mb-1">🃏 Hole Cards</p>
+                  <p className="font-mono text-xs text-blue-400 font-bold">
+                    {formatCards(holeCards)}
+                  </p>
+                  {isPremiumHand(holeCards) && (
+                    <p className="text-xs text-yellow-400 mt-1">⭐ Premium</p>
+                  )}
+                </div>
+              )}
+
+              {communityCards.length > 0 && (
+                <div>
+                  <p className="text-gray-400 mb-1">🏘️ Community</p>
+                  <p className="font-mono text-xs text-green-400 font-bold break-all">
+                    {formatCards(communityCards)}
+                  </p>
+                </div>
+              )}
+
+              <div>
+                <p className="text-gray-400 mb-1">🏆 Best Hand</p>
+                <p className="font-bold text-xs text-yellow-500">
+                  {handDescription}
+                </p>
+              </div>
+
+              <div className="pt-2 border-t border-gray-600">
+                <p className="text-gray-400 mb-2">🎯 Stage</p>
+                <div className="flex flex-col gap-1">
+                  <span className={`px-2 py-1 rounded-full text-xs font-bold text-center ${
+                    gameStage === 'preflop' ? 'bg-blue-600' :
+                    gameStage === 'flop' ? 'bg-green-600' :
+                    gameStage === 'turn' ? 'bg-yellow-600' : 'bg-red-600'
+                  }`}>
+                    {gameStage.toUpperCase()}
+                  </span>
+                </div>
+              </div>
+
+              {/* Reset Button */}
+              {selectedCards.length > 0 && (
+                <div className="pt-2">
+                  <button
+                    onClick={handleReset}
+                    className="w-full bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded-lg font-medium transition-colors duration-200 text-xs"
+                  >
+                    Reset Hand
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Card Picker - Center (Expanded) */}
+          <div className="col-span-8 row-span-8 bg-gray-800/90 backdrop-blur-sm rounded-xl p-3 border border-gray-700 shadow-xl overflow-hidden">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Calculator className="h-4 w-4 text-yellow-500" />
+                <h2 className="text-sm font-bold">Select Your Cards</h2>
+              </div>
+              <div className="text-xs text-gray-300">
+                {selectedCards.length}/7
+              </div>
+            </div>
+            <div className="h-[calc(100%-2rem)] overflow-auto">
+              <CardPicker onSelect={setSelectedCards} selectedCards={selectedCards} />
+            </div>
+          </div>
+
+          {/* Monte Carlo Simulation + AI Advisor - Right Side (Smaller) */}
+          <div className="col-span-2 row-span-8 bg-gray-800/90 backdrop-blur-sm rounded-xl p-3 border border-gray-700 shadow-xl">
+            <h3 className="text-xs font-bold mb-3 flex items-center gap-2">
               <TrendingUp className="h-3 w-3 text-yellow-500" />
-              Monte Carlo Simulation
+              Monte Carlo
               {fastMode && <span className="text-xs bg-green-600 px-1 py-0.5 rounded">FAST</span>}
             </h3>
 
             {isSimulating && (
               <div className="flex flex-col items-center justify-center py-4">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-yellow-500 mb-2"></div>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-yellow-500 mb-2"></div>
                 <span className="text-gray-400 font-medium text-xs text-center">
                   Running {fastMode ? '300' : '1,000'} simulations...
                 </span>
@@ -389,11 +475,11 @@ export default function App() {
 
             {simulationError && (
               <div className="text-center py-4 text-red-400 mb-4">
-                <div className="text-2xl mb-2">⚠️</div>
+                <div className="text-xl mb-2">⚠️</div>
                 <p className="text-xs font-medium">Simulation Error</p>
                 <button
                   onClick={handleReset}
-                  className="mt-2 bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-xs"
+                  className="mt-2 bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded text-xs"
                 >
                   Reset
                 </button>
@@ -416,92 +502,6 @@ export default function App() {
                 gameStage={gameStage}
                 handDescription={handDescription}
               />
-            </div>
-          </div>
-
-          {/* Hand Analysis - Left Side */}
-          <div className="col-span-3 row-span-8 bg-gray-800/90 backdrop-blur-sm rounded-xl p-4 border border-gray-700 shadow-xl">
-            <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
-              <Spades className="h-3 w-3 text-yellow-500" />
-              Hand Analysis
-            </h3>
-            
-            <div className="space-y-3 text-xs">
-              <div>
-                <p className="text-gray-400 mb-1">Cards ({selectedCards.length}/7)</p>
-                <p className="font-mono text-xs text-white break-all">
-                  {selectedCards.length > 0 ? formatCards(selectedCards) : "None"}
-                </p>
-              </div>
-
-              {holeCards.length === 2 && (
-                <div>
-                  <p className="text-gray-400 mb-1">🃏 Hole Cards</p>
-                  <p className="font-mono text-sm text-blue-400 font-bold">
-                    {formatCards(holeCards)}
-                  </p>
-                  {isPremiumHand(holeCards) && (
-                    <p className="text-xs text-yellow-400 mt-1">⭐ Premium</p>
-                  )}
-                </div>
-              )}
-
-              {communityCards.length > 0 && (
-                <div>
-                  <p className="text-gray-400 mb-1">🏘️ Community</p>
-                  <p className="font-mono text-sm text-green-400 font-bold break-all">
-                    {formatCards(communityCards)}
-                  </p>
-                </div>
-              )}
-
-              <div>
-                <p className="text-gray-400 mb-1">🏆 Best Hand</p>
-                <p className="font-bold text-sm text-yellow-500">
-                  {handDescription}
-                </p>
-              </div>
-
-              <div className="pt-2 border-t border-gray-600">
-                <p className="text-gray-400 mb-2">🎯 Stage</p>
-                <div className="flex flex-col gap-1">
-                  <span className={`px-2 py-1 rounded-full text-xs font-bold text-center ${
-                    gameStage === 'preflop' ? 'bg-blue-600' :
-                    gameStage === 'flop' ? 'bg-green-600' :
-                    gameStage === 'turn' ? 'bg-yellow-600' : 'bg-red-600'
-                  }`}>
-                    {gameStage.toUpperCase()}
-                  </span>
-                </div>
-              </div>
-
-              {/* Reset Button */}
-              {selectedCards.length > 0 && (
-                <div className="pt-2">
-                  <button
-                    onClick={handleReset}
-                    className="w-full bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg font-medium transition-colors duration-200 text-xs"
-                  >
-                    Reset Hand
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Card Picker - Center (Expanded) */}
-          <div className="col-span-9 row-span-8 bg-gray-800/90 backdrop-blur-sm rounded-xl p-3 border border-gray-700 shadow-xl overflow-hidden">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <Calculator className="h-4 w-4 text-yellow-500" />
-                <h2 className="text-sm font-bold">Select Your Cards</h2>
-              </div>
-              <div className="text-xs text-gray-300">
-                {selectedCards.length}/7
-              </div>
-            </div>
-            <div className="h-[calc(100%-2rem)] overflow-auto">
-              <CardPicker onSelect={setSelectedCards} selectedCards={selectedCards} />
             </div>
           </div>
         </div>
