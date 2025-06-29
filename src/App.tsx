@@ -66,6 +66,7 @@ export default function App() {
     const thisSimulation = currentSimulationRef.current;
 
     if (selectedCards.length < 2) {
+      console.log('📝 Not enough cards - showing initial message');
       setAdvice({
         action: "Select your 2 hole cards to begin",
         confidence: 'low',
@@ -78,8 +79,10 @@ export default function App() {
     }
 
     if (selectedCards.length === 2) {
+      console.log('📝 Pre-flop advice only');
       // Pre-flop advice only
       const preflopAdvice = getPreflopAdvice(holeCards);
+      console.log('📝 Pre-flop advice:', preflopAdvice);
       setAdvice(preflopAdvice);
       setSimulationResult(null);
       setIsSimulating(false);
@@ -87,6 +90,7 @@ export default function App() {
     }
 
     if (selectedCards.length < 5) {
+      console.log('📝 Need more community cards');
       // Still need more community cards
       setAdvice({
         action: "Add more community cards for analysis",
@@ -100,6 +104,7 @@ export default function App() {
     }
 
     // Run Monte Carlo simulation for 5+ cards
+    console.log('🎲 Starting simulation for 5+ cards');
     setIsSimulating(true);
     setAdvice({
       action: "🎲 Analyzing your hand...",
@@ -111,22 +116,34 @@ export default function App() {
     // Run simulation
     const runSimulation = async () => {
       try {
-        console.log(`🚀 Starting simulation #${thisSimulation}`);
+        console.log(`🚀 Starting simulation #${thisSimulation} with ${selectedCards.length} cards`);
         
         const iterations = fastMode ? 300 : 1000;
         const simulationFunction = fastMode ? quickSimulation : monteCarloSimulation;
         
         const result = await simulationFunction(selectedCards, iterations);
         
+        console.log(`📊 Simulation #${thisSimulation} result:`, result);
+        
         // Only update if this simulation is still current
         if (currentSimulationRef.current === thisSimulation) {
-          console.log(`✅ Simulation #${thisSimulation} completed successfully`);
+          console.log(`✅ Simulation #${thisSimulation} completed successfully - updating advice`);
+          
+          // Update simulation result first
           setSimulationResult(result);
+          
+          // Get and set advice
           const postflopAdvice = getPostflopAdvice(result.win, gameStage);
+          console.log(`📝 Generated advice:`, postflopAdvice);
           setAdvice(postflopAdvice);
+          
+          // Clear simulation state
           setIsSimulating(false);
+          setSimulationError(null);
+          
+          console.log(`🎯 Final advice set:`, postflopAdvice);
         } else {
-          console.log(`❌ Simulation #${thisSimulation} was superseded`);
+          console.log(`❌ Simulation #${thisSimulation} was superseded by #${currentSimulationRef.current}`);
         }
         
       } catch (error) {
@@ -134,7 +151,8 @@ export default function App() {
         
         // Only update if this simulation is still current
         if (currentSimulationRef.current === thisSimulation) {
-          setSimulationError(error.message || "Unknown simulation error");
+          const errorMessage = error instanceof Error ? error.message : "Unknown simulation error";
+          setSimulationError(errorMessage);
           setAdvice({
             action: "⚠️ Calculation Error",
             confidence: 'low',
@@ -146,19 +164,16 @@ export default function App() {
       }
     };
 
-    // Start simulation with small delay to prevent rapid firing
-    const timeoutId = setTimeout(runSimulation, 100);
+    // Start simulation immediately (no delay)
+    runSimulation();
     
-    return () => {
-      clearTimeout(timeoutId);
-    };
-    
-  }, [selectedCards, gameStage, holeCards, fastMode]);
+  }, [selectedCards, fastMode]); // Removed gameStage and holeCards from dependencies to prevent loops
 
   /**
    * Reset all state
    */
   const handleReset = () => {
+    console.log('🔄 Resetting all state');
     currentSimulationRef.current += 1; // Cancel any running simulation
     setSelectedCards([]);
     setSimulationResult(null);
@@ -304,8 +319,8 @@ export default function App() {
               <p className="text-sm font-medium text-gray-300 mb-2">💡 Strategy Notes:</p>
               <ul className="text-xs space-y-1 text-gray-300">
                 <li>• Pre-flop: Bet 4x with pairs, suited Aces, or Broadway cards</li>
-                <li>• Post-flop: Bet 3x with 60%+ win rate, 2x with 40-60%</li>
-                <li>• Consider folding with less than 40% win probability</li>
+                <li>• Post-flop: Bet 3x with 65%+ win rate, 2x with 45-65%</li>
+                <li>• Consider folding with less than 35% win probability</li>
                 <li>• {isPremiumHand(holeCards) ? "✨ You have a premium starting hand!" : "Standard hand - play carefully"}</li>
               </ul>
             </div>
