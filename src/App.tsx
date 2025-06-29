@@ -26,12 +26,12 @@ export default function App() {
 
   // Get tip message based on current state
   const getTipMessage = (): string => {
-    if (selectedCards.length === 0) {
-      return "Tip: Start by selecting your 2 hole cards.";
+    if (selectedCards.length === 0 || selectedCards.length === 1) {
+      return "Tip: Select your 2 hole cards to begin.";
     } else if (selectedCards.length === 2) {
-      return "Tip: You've selected your hole cards. Now add Flop cards (3 cards).";
+      return "Tip: Now add Flop cards (3 cards).";
     } else if (selectedCards.length >= 5) {
-      return "Tip: Full board detected. Monte Carlo simulation will now run.";
+      return "Tip: Full board detected. Monte Carlo odds are running.";
     } else {
       return "Tip: Add more community cards to complete the board.";
     }
@@ -39,6 +39,7 @@ export default function App() {
 
   // Reset function to clear all state
   const handleReset = () => {
+    setSelectedCards([]);
     setSimulationResult(null);
     setAdvice("Select your 2 hole cards to begin");
   };
@@ -118,13 +119,13 @@ export default function App() {
       </div>
 
       {/* Sticky Tip Bar */}
-      <div className="bg-yellow-100 text-yellow-800 text-sm rounded p-2 mb-4 shadow mx-4 mt-4">
+      <div className="bg-yellow-100 text-yellow-900 text-sm rounded p-2 mb-4 shadow-md sticky top-0 z-10 mx-4 mt-4">
         <div className="max-w-3xl mx-auto text-center font-medium">
           {getTipMessage()}
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-6 space-y-6 max-w-6xl">
+      <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
         {/* Card Picker */}
         <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
           <div className="flex items-center gap-2 mb-4">
@@ -175,10 +176,35 @@ export default function App() {
                   {handDescription}
                 </p>
               </div>
+
+              {/* Betting Advice - Moved to top of results */}
+              <div className="mt-6 pt-4 border-t border-gray-600">
+                <h4 className="text-md font-semibold mb-3 flex items-center gap-2">
+                  <Target className="h-4 w-4 text-green-400" />
+                  Betting Advice
+                </h4>
+                
+                <div className={`p-3 rounded-lg border-2 ${getAdviceStyle(advice)}`}>
+                  <p className="text-xl font-bold text-center">
+                    {advice}
+                  </p>
+                </div>
+
+                {selectedCards.length >= 2 && (
+                  <div className="mt-3 p-2 bg-gray-700/50 rounded text-xs text-gray-300">
+                    <p className="font-medium mb-1">Strategy Notes:</p>
+                    <ul className="space-y-0.5">
+                      <li>• Pre-flop: Bet 4x with pairs, A-x suited, or Broadway cards</li>
+                      <li>• Post-flop: Bet 4x with 60%+ win rate, 2x with 40-60%</li>
+                      <li>• Consider folding with less than 30% win probability</li>
+                    </ul>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* Simulation Results */}
+          {/* Monte Carlo Simulation Results */}
           <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
             <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-blue-400" />
@@ -222,31 +248,6 @@ export default function App() {
               </div>
             )}
           </div>
-        </div>
-
-        {/* Betting Advice */}
-        <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
-          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-            <Target className="h-5 w-5 text-green-400" />
-            Betting Advice
-          </h3>
-          
-          <div className={`p-4 rounded-lg border-2 ${getAdviceStyle(advice)}`}>
-            <p className="text-xl font-bold text-center">
-              {advice}
-            </p>
-          </div>
-
-          {selectedCards.length >= 2 && (
-            <div className="mt-4 p-3 bg-gray-700/50 rounded-lg">
-              <p className="text-sm text-gray-400 mb-2">Strategy Notes:</p>
-              <ul className="text-sm space-y-1 text-gray-300">
-                <li>• Pre-flop: Bet 4x with pairs, A-x suited, or Broadway cards</li>
-                <li>• Post-flop: Bet 4x with 60%+ win rate, 2x with 40-60%</li>
-                <li>• Consider folding with less than 30% win probability</li>
-              </ul>
-            </div>
-          )}
         </div>
       </div>
 

@@ -89,16 +89,16 @@ export default function CardPicker({ onSelect, onReset }: CardPickerProps) {
         onClick={() => toggleCard(card)}
         disabled={isDisabled}
         className={`
-          w-14 h-18 rounded-lg border-2 font-bold p-1
+          w-12 h-12 rounded-lg border shadow-sm p-2 text-center text-lg font-bold
           flex flex-col justify-center items-center
-          transition-all duration-200 transform hover:scale-105 hover:shadow-md
-          ${rank === 'T' ? 'text-xs' : 'text-sm'}
+          transition duration-150 ease-in-out hover:shadow-lg hover:scale-105
+          ${rank === 'T' ? 'text-sm' : 'text-lg'}
           ${isSelected 
-            ? `bg-green-600 text-white border-2 border-green-800 shadow-lg` 
+            ? `bg-green-700 text-white border-green-800 shadow-md scale-105` 
             : `bg-white border-gray-400 hover:bg-gray-50 ${getSuitColor(suit)}`
           }
           ${isDisabled 
-            ? 'opacity-50 cursor-not-allowed hover:scale-100 hover:shadow-none' 
+            ? 'opacity-50 cursor-not-allowed hover:scale-100 hover:shadow-sm' 
             : 'cursor-pointer'
           }
         `}
@@ -107,13 +107,13 @@ export default function CardPicker({ onSelect, onReset }: CardPickerProps) {
         title={`${displayRank}${getSuitSymbol(suit)}`}
       >
         <span className="leading-none">{displayRank}</span>
-        <span className="text-lg leading-none">{getSuitSymbol(suit)}</span>
+        <span className="text-base leading-none">{getSuitSymbol(suit)}</span>
       </button>
     );
   };
 
   return (
-    <div className="w-full max-w-5xl mx-auto px-4">
+    <div className="w-full max-w-3xl mx-auto px-4">
       <div className="mb-4 text-center">
         <p className="text-sm text-gray-400">
           Select cards: {selected.length}/7 
@@ -123,23 +123,23 @@ export default function CardPicker({ onSelect, onReset }: CardPickerProps) {
         </p>
       </div>
       
-      {/* Scrollable container for mobile */}
+      {/* Card grid organized by suits */}
       <div className="overflow-x-auto pb-4">
-        <div className="grid grid-cols-4 gap-6 min-w-[400px] p-6 bg-gray-800 rounded-lg">
+        <div className="flex flex-wrap justify-start gap-1 min-w-[320px] p-4 bg-gray-800 rounded-lg">
           {allSuits.map(suit => (
-            <div key={suit} className="flex flex-col items-center">
+            <div key={suit} className="flex flex-col items-center mb-4 mx-2">
               {/* Suit header */}
-              <div className="mb-4 text-center">
-                <div className={`text-2xl ${getSuitColor(suit)} bg-white rounded-full w-10 h-10 flex items-center justify-center shadow-md`}>
+              <div className="mb-3 text-center">
+                <div className={`text-xl ${getSuitColor(suit)} bg-white rounded-full w-8 h-8 flex items-center justify-center shadow-sm mb-1`}>
                   {getSuitSymbol(suit)}
                 </div>
-                <div className="text-xs text-gray-300 font-medium mt-1">
-                  {getSuitName(suit)}
+                <div className="text-xs text-gray-300 font-medium">
+                  {getSuitSymbol(suit)}
                 </div>
               </div>
               
               {/* 3x4 Grid of cards (2-K) */}
-              <div className="grid grid-cols-3 gap-2 mb-3">
+              <div className="grid grid-cols-3 gap-1 mb-2">
                 {rankLayout.map((row, rowIndex) => 
                   row.map((rank) => (
                     <div key={`${rank}-${suit}`}>
@@ -159,10 +159,10 @@ export default function CardPicker({ onSelect, onReset }: CardPickerProps) {
       </div>
       
       {/* Reset button */}
-      <div className="text-center mt-4">
+      <div className="text-center mt-3">
         <button
           onClick={handleReset}
-          className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition-colors duration-200 font-medium"
+          className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded mt-3 transition-colors duration-200 font-medium"
           disabled={selected.length === 0}
         >
           Reset Hand
