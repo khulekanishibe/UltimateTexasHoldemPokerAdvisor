@@ -6,13 +6,8 @@ export type Card = `${'2'|'3'|'4'|'5'|'6'|'7'|'8'|'9'|'T'|'J'|'Q'|'K'|'A'}${'h'|
 // All suits in display order
 const allSuits = ['h', 'd', 's', 'c'] as const;
 
-// Ranks arranged in 3x4 grid + Ace at bottom center
-const gridRanks = [
-  ['2', '3', '4'],  // Row 1
-  ['5', '6', '7'],  // Row 2
-  ['8', '9', 'T'],  // Row 3
-  ['J', 'Q', 'K']   // Row 4
-] as const;
+// All ranks in order
+const allRanks = ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A'] as const;
 
 /**
  * Convert rank for display (T becomes 10 for better readability)
@@ -56,7 +51,7 @@ interface CardPickerProps {
  * CardPicker Component
  * 
  * Renders a 52-card grid organized by suit in vertical columns.
- * Each suit shows cards in a 3x4 grid with Ace centered at the bottom.
+ * Each suit shows cards from 2 to A vertically.
  * Users can select up to 7 cards total (2 hole + 5 community).
  * 
  * Features:
@@ -111,10 +106,10 @@ export default function CardPicker({ onSelect, selectedCards = [] }: CardPickerP
         onClick={() => toggleCard(card)}
         disabled={isDisabled}
         className={`
-          w-14 h-20 rounded-lg border-2 shadow-sm p-2 text-center font-bold
+          w-12 h-16 rounded-lg border-2 shadow-sm p-1 text-center font-bold
           flex flex-col justify-center items-center
           transition-all duration-200 ease-in-out
-          ${rank === 'T' ? 'text-sm' : 'text-lg'}
+          ${rank === 'T' ? 'text-xs' : 'text-sm'}
           ${isSelected 
             ? 'bg-green-600 text-white border-green-500 shadow-lg scale-105 ring-2 ring-green-300' 
             : `bg-white border-gray-300 hover:bg-gray-50 hover:border-gray-400 hover:shadow-md hover:scale-105 ${getSuitColor(suit)}`
@@ -129,19 +124,19 @@ export default function CardPicker({ onSelect, selectedCards = [] }: CardPickerP
         title={`${displayRank}${getSuitSymbol(suit)}`}
       >
         <span className="leading-none font-bold">{displayRank}</span>
-        <span className="text-xl leading-none mt-1">{getSuitSymbol(suit)}</span>
+        <span className="text-lg leading-none">{getSuitSymbol(suit)}</span>
       </button>
     );
   };
 
   /**
-   * Render suit column with 3x4 grid + centered Ace
+   * Render suit column with all ranks vertically
    */
   const renderSuitColumn = (suit: string) => (
     <div key={suit} className="flex flex-col items-center">
       {/* Suit header */}
-      <div className="mb-4 text-center">
-        <div className={`text-2xl ${getSuitColor(suit)} bg-white rounded-full w-10 h-10 flex items-center justify-center shadow-md border-2 border-gray-200 mb-2`}>
+      <div className="mb-3 text-center">
+        <div className={`text-xl ${getSuitColor(suit)} bg-white rounded-full w-8 h-8 flex items-center justify-center shadow-md border-2 border-gray-200 mb-1`}>
           {getSuitSymbol(suit)}
         </div>
         <div className="text-xs text-white font-bold uppercase tracking-wider">
@@ -149,27 +144,22 @@ export default function CardPicker({ onSelect, selectedCards = [] }: CardPickerP
         </div>
       </div>
       
-      {/* 3x4 Grid for ranks 2-K */}
-      <div className="grid grid-cols-3 gap-2 mb-3">
-        {gridRanks.flat().map((rank) => (
+      {/* All ranks for this suit vertically */}
+      <div className="flex flex-col gap-1">
+        {allRanks.map((rank) => (
           <div key={`${rank}-${suit}`}>
             {renderCard(rank, suit)}
           </div>
         ))}
       </div>
-      
-      {/* Centered Ace at bottom */}
-      <div className="flex justify-center">
-        {renderCard('A', suit)}
-      </div>
     </div>
   );
 
   return (
-    <div className="w-full max-w-5xl mx-auto">
+    <div className="w-full max-w-4xl mx-auto">
       {/* Header with selection count and clear button */}
       <div className="flex justify-between items-center mb-4">
-        <div className="text-sm text-gray-400">
+        <div className="text-sm text-gray-300">
           <span className="font-medium">Cards Selected: {selected.length}/7</span>
           {selected.length <= 2 && <span className="ml-2 text-blue-400">(Choose hole cards first)</span>}
           {selected.length > 2 && selected.length <= 5 && <span className="ml-2 text-green-400">(Add flop cards)</span>}
@@ -186,16 +176,16 @@ export default function CardPicker({ onSelect, selectedCards = [] }: CardPickerP
         )}
       </div>
       
-      {/* Card grid organized by suits in vertical columns with 3x4 + Ace layout */}
-      <div className="bg-poker-felt rounded-xl p-6 shadow-inner border-4 border-poker-feltDark">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 justify-items-center">
+      {/* Card grid organized by suits in vertical columns */}
+      <div className="bg-gray-800 rounded-xl p-4 shadow-inner border-2 border-gray-700">
+        <div className="grid grid-cols-4 gap-4 justify-items-center">
           {allSuits.map(suit => renderSuitColumn(suit))}
         </div>
       </div>
       
       {/* Selected cards display */}
       {selected.length > 0 && (
-        <div className="mt-6 p-4 bg-gray-800 rounded-lg border border-gray-700">
+        <div className="mt-4 p-4 bg-gray-800 rounded-lg border border-gray-700">
           <p className="text-sm font-medium text-gray-300 mb-3 text-center">Selected Cards</p>
           <div className="flex flex-wrap justify-center gap-2">
             {selected.map((card, index) => {

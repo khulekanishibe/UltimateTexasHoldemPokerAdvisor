@@ -1,16 +1,15 @@
 import React, { useState, useEffect, useTransition } from "react";
-import { Spade as Spades, TrendingUp, Calculator, Target, Zap } from "lucide-react";
+import { Spade as Spades, TrendingUp, Calculator, Target, Zap, Clock } from "lucide-react";
 import CardPicker, { Card } from "./components/CardPicker";
 import { evaluateHand, formatCards, isPremiumHand } from "./components/HandEvaluator";
 import { 
   getPreflopAdvice, 
   getPostflopAdvice, 
-  getAdviceStyle, 
   getGameStage,
-  getStageTip,
+  getTipMessage,
   type BettingAdvice 
 } from "./components/BetAdvisor";
-import { monteCarloSimulation, type SimulationResult } from "./utils/monteCarlo";
+import { monteCarloSimulation, quickSimulation, type SimulationResult } from "./utils/monteCarlo";
 
 /**
  * Ultimate Texas Hold'em Poker Advisor
@@ -35,11 +34,13 @@ export default function App() {
   // UI state
   const [isPending, startTransition] = useTransition();
   const [isSimulating, setIsSimulating] = useState(false);
+  const [fastMode, setFastMode] = useState(true);
 
   // Derived state
   const gameStage = getGameStage(selectedCards.length);
   const holeCards = selectedCards.slice(0, 2);
   const communityCards = selectedCards.slice(2);
+  const tipMessage = getTipMessage(gameStage, selectedCards.length);
   
   // Get current hand description if enough cards are selected
   const handDescription = selectedCards.length >= 5 
@@ -86,14 +87,17 @@ export default function App() {
     // Run Monte Carlo simulation for post-flop advice
     setIsSimulating(true);
     setAdvice({
-      action: "🎲 Running simulation...",
+      action: "🕐 Calculating odds...",
       confidence: 'medium',
-      reasoning: "Calculating win probabilities",
+      reasoning: "Running Monte Carlo simulation",
       stage: gameStage
     });
     
     startTransition(() => {
-      monteCarloSimulation(selectedCards, 1000)
+      const simulationFunction = fastMode ? quickSimulation : monteCarloSimulation;
+      const iterations = fastMode ? 300 : 1000;
+      
+      simulationFunction(selectedCards, iterations)
         .then((result) => {
           setSimulationResult(result);
           const postflopAdvice = getPostflopAdvice(result.win, gameStage);
@@ -112,7 +116,7 @@ export default function App() {
           setIsSimulating(false);
         });
     });
-  }, [selectedCards, gameStage, holeCards]);
+  }, [selectedCards, gameStage, holeCards, fastMode]);
 
   /**
    * Reset all state
@@ -129,6 +133,25 @@ export default function App() {
   };
 
   /**
+   * Get advice styling based on action type
+   */
+  const getAdviceStyle = (advice: BettingAdvice): string => {
+    const action = advice.action.toLowerCase();
+    
+    if (action.includes("4x") || action.includes("3x")) {
+      return "text-green-400 bg-green-900/20 border-green-500";
+    } else if (action.includes("2x")) {
+      return "text-yellow-400 bg-yellow-900/20 border-yellow-500";
+    } else if (action.includes("check")) {
+      return "text-blue-400 bg-blue-900/20 border-blue-500";
+    } else if (action.includes("fold")) {
+      return "text-red-400 bg-red-900/20 border-red-500";
+    } else {
+      return "text-gray-400 bg-gray-900/20 border-gray-500";
+    }
+  };
+
+  /**
    * Progress bar component for simulation results
    */
   const ProgressBar = ({ 
@@ -142,17 +165,17 @@ export default function App() {
     color: string;
     icon?: React.ReactNode;
   }) => (
-    <div className="mb-4">
-      <div className="flex justify-between items-center text-sm mb-2">
+    <div className="mb-3">
+      <div className="flex justify-between items-center text-sm mb-1">
         <span className="text-gray-300 flex items-center gap-1">
           {icon}
           {label}
         </span>
         <span className="font-bold text-white">{value.toFixed(1)}%</span>
       </div>
-      <div className="w-full bg-gray-700 rounded-full h-4 overflow-hidden">
+      <div className="w-full bg-gray-700 rounded-full h-3 overflow-hidden">
         <div 
-          className={`h-4 rounded-full transition-all duration-1000 ease-out ${color}`}
+          className={`h-3 rounded-full transition-all duration-1000 ease-out ${color}`}
           style={{ width: `${value}%` }}
         />
       </div>
@@ -160,41 +183,42 @@ export default function App() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-poker-feltDark to-poker-felt text-white">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
       {/* Header */}
-      <div className="bg-gray-900/80 backdrop-blur-sm border-b border-gray-700 sticky top-0 z-20">
-        <div className="container mx-auto px-4 py-6">
+      <div className="bg-gray-900/90 backdrop-blur-sm border-b border-gray-700 sticky top-0 z-20">
+        <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-center gap-3">
-            <Spades className="h-8 w-8 text-poker-gold" />
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-poker-gold to-poker-silver bg-clip-text text-transparent">
+            <Spades className="h-7 w-7 text-yellow-500" />
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-yellow-400 to-yellow-600 bg-clip-text text-transparent">
               Ultimate Texas Hold'em Advisor
             </h1>
-            <Target className="h-8 w-8 text-poker-silver" />
+            <Target className="h-7 w-7 text-yellow-500" />
           </div>
-          <p className="text-center text-gray-400 mt-2">
+          <p className="text-center text-gray-400 mt-1 text-sm">
             Professional poker strategy with Monte Carlo simulation
           </p>
         </div>
       </div>
 
       {/* Dynamic Tip Banner */}
-      <div className="bg-yellow-100 text-yellow-900 text-sm rounded-lg p-3 mb-6 shadow-md sticky top-20 z-10 mx-4 mt-4">
+      <div className="bg-yellow-100 text-yellow-900 text-sm rounded-lg p-3 mb-4 shadow-md sticky top-16 z-10 mx-4 mt-4">
         <div className="max-w-4xl mx-auto text-center font-medium">
-          {getStageTip(gameStage, selectedCards.length)}
+          {tipMessage}
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 py-6 space-y-8">
+      <div className="max-w-4xl mx-auto px-4 py-4 space-y-6">
         {/* Betting Advice - Top Priority */}
         <div className="bg-gray-800/90 backdrop-blur-sm rounded-xl p-6 border border-gray-700 shadow-xl">
-          <h2 className="text-2xl font-bold mb-4 flex items-center gap-3">
-            <Target className="h-6 w-6 text-poker-gold" />
+          <h2 className="text-xl font-bold mb-4 flex items-center gap-3">
+            <Target className="h-5 w-5 text-yellow-500" />
             Betting Advice
-            {advice.confidence === 'high' && <Zap className="h-5 w-5 text-yellow-400" />}
+            {advice.confidence === 'high' && <Zap className="h-4 w-4 text-yellow-400" />}
+            {(isSimulating || isPending) && <Clock className="h-4 w-4 text-blue-400 animate-spin" />}
           </h2>
           
-          <div className={`p-6 rounded-xl border-2 ${getAdviceStyle(advice)} shadow-lg`}>
-            <p className="text-2xl font-bold text-center mb-2">
+          <div className={`p-4 rounded-xl border-2 ${getAdviceStyle(advice)} shadow-lg`}>
+            <p className="text-xl font-bold text-center mb-2">
               {advice.action}
             </p>
             <p className="text-center text-sm opacity-90">
@@ -215,12 +239,12 @@ export default function App() {
 
           {/* Strategy Notes */}
           {selectedCards.length >= 2 && (
-            <div className="mt-4 p-4 bg-gray-700/50 rounded-lg border border-gray-600">
+            <div className="mt-4 p-3 bg-gray-700/50 rounded-lg border border-gray-600">
               <p className="text-sm font-medium text-gray-300 mb-2">💡 Strategy Notes:</p>
-              <ul className="text-sm space-y-1 text-gray-300">
+              <ul className="text-xs space-y-1 text-gray-300">
                 <li>• Pre-flop: Bet 4x with pairs, suited Aces, or Broadway cards</li>
-                <li>• Post-flop: Bet 3x with 60%+ win rate, check with 40-60%</li>
-                <li>• Consider folding with less than 30% win probability</li>
+                <li>• Post-flop: Bet 3x with 60%+ win rate, 2x with 40-60%</li>
+                <li>• Consider folding with less than 40% win probability</li>
                 <li>• {isPremiumHand(holeCards) ? "✨ You have a premium starting hand!" : "Standard hand - play carefully"}</li>
               </ul>
             </div>
@@ -229,34 +253,56 @@ export default function App() {
 
         {/* Card Picker */}
         <div className="bg-gray-800/90 backdrop-blur-sm rounded-xl p-6 border border-gray-700 shadow-xl">
-          <div className="flex items-center gap-3 mb-6">
-            <Calculator className="h-6 w-6 text-poker-gold" />
-            <h2 className="text-2xl font-bold">Select Your Cards</h2>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <Calculator className="h-5 w-5 text-yellow-500" />
+              <h2 className="text-xl font-bold">Select Your Cards</h2>
+            </div>
+            
+            {/* Fast Mode Toggle */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-400">Fast Mode</span>
+              <button
+                onClick={() => setFastMode(!fastMode)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  fastMode ? 'bg-green-600' : 'bg-gray-600'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    fastMode ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+              <span className="text-xs text-gray-500">
+                {fastMode ? '300 iter' : '1000 iter'}
+              </span>
+            </div>
           </div>
           <CardPicker onSelect={setSelectedCards} selectedCards={selectedCards} />
         </div>
 
         {/* Results Panel */}
-        <div className="grid lg:grid-cols-2 gap-8">
+        <div className="grid lg:grid-cols-2 gap-6">
           {/* Hand Information */}
           <div className="bg-gray-800/90 backdrop-blur-sm rounded-xl p-6 border border-gray-700 shadow-xl">
-            <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
-              <Spades className="h-5 w-5 text-poker-gold" />
+            <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+              <Spades className="h-4 w-4 text-yellow-500" />
               Hand Analysis
             </h3>
             
-            <div className="space-y-6">
+            <div className="space-y-4">
               <div>
-                <p className="text-sm text-gray-400 mb-2">Selected Cards ({selectedCards.length}/7)</p>
-                <p className="font-mono text-lg text-white">
+                <p className="text-sm text-gray-400 mb-1">Selected Cards ({selectedCards.length}/7)</p>
+                <p className="font-mono text-base text-white">
                   {selectedCards.length > 0 ? formatCards(selectedCards) : "None selected"}
                 </p>
               </div>
 
               {holeCards.length === 2 && (
                 <div>
-                  <p className="text-sm text-gray-400 mb-2">🃏 Hole Cards</p>
-                  <p className="font-mono text-xl text-blue-400 font-bold">
+                  <p className="text-sm text-gray-400 mb-1">🃏 Hole Cards</p>
+                  <p className="font-mono text-lg text-blue-400 font-bold">
                     {formatCards(holeCards)}
                   </p>
                   {isPremiumHand(holeCards) && (
@@ -267,25 +313,25 @@ export default function App() {
 
               {communityCards.length > 0 && (
                 <div>
-                  <p className="text-sm text-gray-400 mb-2">🏘️ Community Cards</p>
-                  <p className="font-mono text-xl text-green-400 font-bold">
+                  <p className="text-sm text-gray-400 mb-1">🏘️ Community Cards</p>
+                  <p className="font-mono text-lg text-green-400 font-bold">
                     {formatCards(communityCards)}
                   </p>
                 </div>
               )}
 
               <div>
-                <p className="text-sm text-gray-400 mb-2">🏆 Best Hand</p>
-                <p className="font-bold text-xl text-poker-gold">
+                <p className="text-sm text-gray-400 mb-1">🏆 Best Hand</p>
+                <p className="font-bold text-lg text-yellow-500">
                   {handDescription}
                 </p>
               </div>
 
               {/* Game Stage Indicator */}
-              <div className="pt-4 border-t border-gray-600">
+              <div className="pt-3 border-t border-gray-600">
                 <p className="text-sm text-gray-400 mb-2">🎯 Current Stage</p>
                 <div className="flex items-center gap-2">
-                  <span className={`px-3 py-1 rounded-full text-sm font-bold ${
+                  <span className={`px-2 py-1 rounded-full text-xs font-bold ${
                     gameStage === 'preflop' ? 'bg-blue-600' :
                     gameStage === 'flop' ? 'bg-green-600' :
                     gameStage === 'turn' ? 'bg-yellow-600' : 'bg-red-600'
@@ -305,22 +351,23 @@ export default function App() {
 
           {/* Monte Carlo Simulation Results */}
           <div className="bg-gray-800/90 backdrop-blur-sm rounded-xl p-6 border border-gray-700 shadow-xl">
-            <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-poker-gold" />
+            <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-yellow-500" />
               Monte Carlo Simulation
+              {fastMode && <span className="text-xs bg-green-600 px-2 py-1 rounded">FAST</span>}
             </h3>
 
             {(isSimulating || isPending) && (
-              <div className="flex items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-poker-gold"></div>
-                <span className="ml-4 text-gray-400 font-medium">
-                  Running 1,000 simulations...
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-500"></div>
+                <span className="ml-3 text-gray-400 font-medium text-sm">
+                  Running {fastMode ? '300' : '1,000'} simulations...
                 </span>
               </div>
             )}
 
             {simulationResult && !isSimulating && !isPending && (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <ProgressBar 
                   label="Win Probability" 
                   value={simulationResult.win} 
@@ -330,8 +377,8 @@ export default function App() {
                 <ProgressBar 
                   label="Tie Probability" 
                   value={simulationResult.tie} 
-                  color="bg-gradient-to-r from-yellow-600 to-yellow-500"
-                  icon={<span className="text-yellow-400">🤝</span>}
+                  color="bg-gradient-to-r from-blue-600 to-blue-500"
+                  icon={<span className="text-blue-400">🤝</span>}
                 />
                 <ProgressBar 
                   label="Lose Probability" 
@@ -340,14 +387,11 @@ export default function App() {
                   icon={<span className="text-red-400">💔</span>}
                 />
                 
-                <div className="pt-4 border-t border-gray-600">
+                <div className="pt-3 border-t border-gray-600">
                   <div className="flex justify-between items-center text-sm text-gray-400">
                     <span>Simulations: {simulationResult.iterations.toLocaleString()}</span>
-                    <span className={`px-2 py-1 rounded text-xs font-bold ${
-                      simulationResult.confidence >= 90 ? 'bg-green-600' :
-                      simulationResult.confidence >= 80 ? 'bg-yellow-600' : 'bg-gray-600'
-                    }`}>
-                      {simulationResult.confidence}% Confidence
+                    <span className="text-xs">
+                      Mode: {fastMode ? 'Fast (300)' : 'Full (1000)'}
                     </span>
                   </div>
                 </div>
@@ -355,26 +399,38 @@ export default function App() {
             )}
 
             {!simulationResult && !isSimulating && !isPending && selectedCards.length < 5 && (
-              <div className="text-center py-12 text-gray-500">
-                <Calculator className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                <p className="text-lg font-medium">Select at least 5 cards</p>
+              <div className="text-center py-8 text-gray-500">
+                <Calculator className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <p className="text-base font-medium">Select at least 5 cards</p>
                 <p className="text-sm">to run Monte Carlo simulation</p>
               </div>
             )}
           </div>
         </div>
+
+        {/* Reset Button */}
+        {selectedCards.length > 0 && (
+          <div className="text-center">
+            <button
+              onClick={handleReset}
+              className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-medium transition-colors duration-200"
+            >
+              Reset Hand
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Footer */}
-      <footer className="bg-gray-900/80 backdrop-blur-sm border-t border-gray-700 mt-16">
-        <div className="container mx-auto px-4 py-8 text-center text-gray-500">
-          <p className="text-lg font-medium">
+      <footer className="bg-gray-900/80 backdrop-blur-sm border-t border-gray-700 mt-12">
+        <div className="container mx-auto px-4 py-6 text-center text-gray-500">
+          <p className="text-base font-medium">
             Ultimate Texas Hold'em Advisor • Built with React + TypeScript + Monte Carlo Simulation
           </p>
           <p className="text-sm mt-2">
             For entertainment and educational purposes only. Gamble responsibly. 🎲
           </p>
-          <div className="flex justify-center items-center gap-4 mt-4 text-xs">
+          <div className="flex justify-center items-center gap-4 mt-3 text-xs">
             <span>Powered by pokersolver</span>
             <span>•</span>
             <span>Statistical analysis</span>

@@ -20,7 +20,6 @@ export interface SimulationResult {
   tie: number;
   lose: number;
   iterations: number;
-  confidence: number;
 }
 
 /**
@@ -46,21 +45,6 @@ function shuffleArray<T>(array: T[]): T[] {
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
   return shuffled;
-}
-
-/**
- * Calculate confidence level based on number of iterations
- * More iterations = higher confidence in results
- * 
- * @param iterations Number of simulation iterations
- * @returns Confidence percentage (0-100)
- */
-function calculateConfidence(iterations: number): number {
-  if (iterations >= 2000) return 95;
-  if (iterations >= 1000) return 90;
-  if (iterations >= 500) return 85;
-  if (iterations >= 250) return 80;
-  return 75;
 }
 
 /**
@@ -163,14 +147,12 @@ export async function monteCarloSimulation(
 
   // Calculate percentages
   const total = validIterations;
-  const confidence = calculateConfidence(validIterations);
 
   return {
     win: (wins / total) * 100,
     tie: (ties / total) * 100,
     lose: (losses / total) * 100,
-    iterations: validIterations,
-    confidence
+    iterations: validIterations
   };
 }
 
@@ -182,7 +164,7 @@ export async function monteCarloSimulation(
  * @returns Promise resolving to simulation results
  */
 export async function quickSimulation(knownCards: Card[]): Promise<SimulationResult> {
-  return monteCarloSimulation(knownCards, 500);
+  return monteCarloSimulation(knownCards, 300);
 }
 
 /**
@@ -193,79 +175,5 @@ export async function quickSimulation(knownCards: Card[]): Promise<SimulationRes
  * @returns Promise resolving to simulation results
  */
 export async function detailedSimulation(knownCards: Card[]): Promise<SimulationResult> {
-  return monteCarloSimulation(knownCards, 2000);
-}
-
-/**
- * Batch simulation runner that yields intermediate results
- * Useful for showing progress during long simulations
- * 
- * @param knownCards Array of known cards
- * @param totalIterations Total iterations to run
- * @param batchSize Number of iterations per batch
- * @param onProgress Callback for intermediate results
- * @returns Promise resolving to final simulation results
- */
-export async function batchSimulation(
-  knownCards: Card[],
-  totalIterations: number = 2000,
-  batchSize: number = 250,
-  onProgress?: (result: SimulationResult, progress: number) => void
-): Promise<SimulationResult> {
-  
-  let totalWins = 0;
-  let totalTies = 0;
-  let totalLosses = 0;
-  let totalValidIterations = 0;
-  
-  const batches = Math.ceil(totalIterations / batchSize);
-  
-  for (let batch = 0; batch < batches; batch++) {
-    const iterationsThisBatch = Math.min(batchSize, totalIterations - (batch * batchSize));
-    
-    try {
-      const batchResult = await monteCarloSimulation(knownCards, iterationsThisBatch);
-      
-      // Accumulate results
-      const batchWins = (batchResult.win / 100) * batchResult.iterations;
-      const batchTies = (batchResult.tie / 100) * batchResult.iterations;
-      const batchLosses = (batchResult.lose / 100) * batchResult.iterations;
-      
-      totalWins += batchWins;
-      totalTies += batchTies;
-      totalLosses += batchLosses;
-      totalValidIterations += batchResult.iterations;
-      
-      // Calculate current overall percentages
-      const currentResult: SimulationResult = {
-        win: (totalWins / totalValidIterations) * 100,
-        tie: (totalTies / totalValidIterations) * 100,
-        lose: (totalLosses / totalValidIterations) * 100,
-        iterations: totalValidIterations,
-        confidence: calculateConfidence(totalValidIterations)
-      };
-      
-      // Report progress
-      if (onProgress) {
-        const progress = ((batch + 1) / batches) * 100;
-        onProgress(currentResult, progress);
-      }
-      
-    } catch (error) {
-      console.error(`Error in batch ${batch}:`, error);
-      continue;
-    }
-  }
-  
-  if (totalValidIterations === 0) {
-    throw new Error("No valid iterations completed in batch simulation");
-  }
-  
-  return {
-    win: (totalWins / totalValidIterations) * 100,
-    tie: (totalTies / totalValidIterations) * 100,
-    lose: (totalLosses / totalValidIterations) * 100,
-    iterations: totalValidIterations,
-    confidence: calculateConfidence(totalValidIterations)
-  };
+  return monteCarloSimulation(knownCards, 1000);
 }

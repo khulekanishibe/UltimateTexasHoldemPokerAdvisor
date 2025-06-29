@@ -29,7 +29,8 @@ export interface BettingAdvice {
  * 
  * Ultimate Texas Hold'em Pre-flop Strategy:
  * - Bet 4x with premium hands (pairs, A-x suited, Broadway cards)
- * - Check with marginal hands to see the flop
+ * - Bet 2x with playable hands
+ * - Check/Fold with marginal hands
  * 
  * @param holeCards Array of exactly 2 hole cards
  * @returns Betting advice object
@@ -58,7 +59,7 @@ export function getPreflopAdvice(holeCards: Card[]): BettingAdvice {
   // Pocket Aces - Premium hand
   if (isPair && rank1 === 'A') {
     return {
-      action: "🚀 Bet 4x - Pocket Rockets!",
+      action: "🔥 Pocket Rockets — Max it! (4x Bet)",
       confidence: 'high',
       reasoning: "Pocket Aces are the strongest starting hand",
       stage: 'preflop'
@@ -72,7 +73,7 @@ export function getPreflopAdvice(holeCards: Card[]): BettingAdvice {
                     rank1 === 'J' ? 'Jacks' : 
                     rank1 === 'T' ? 'Tens' : `${rank1}s`;
     return {
-      action: "🔥 Bet 4x - Pocket Pair!",
+      action: "4x Bet (Pair)",
       confidence: 'high',
       reasoning: `Pocket ${pairName} are strong pre-flop`,
       stage: 'preflop'
@@ -82,7 +83,7 @@ export function getPreflopAdvice(holeCards: Card[]): BettingAdvice {
   // A-x suited - bet 4x
   if ((rank1 === 'A' || rank2 === 'A') && suited) {
     return {
-      action: "🔥 Bet 4x - Suited Ace!",
+      action: "4x Bet (Suited Ace)",
       confidence: 'high',
       reasoning: "Suited Ace has excellent potential",
       stage: 'preflop'
@@ -93,7 +94,7 @@ export function getPreflopAdvice(holeCards: Card[]): BettingAdvice {
   if (strongRanks.includes(rank1) && strongRanks.includes(rank2)) {
     if (suited) {
       return {
-        action: "🔥 Bet 4x - Suited Broadway!",
+        action: "4x Bet (Strong Combo)",
         confidence: 'high',
         reasoning: "Suited high cards are premium",
         stage: 'preflop'
@@ -102,40 +103,30 @@ export function getPreflopAdvice(holeCards: Card[]): BettingAdvice {
       // AK offsuit is still strong
       if (ranks.includes('A') && ranks.includes('K')) {
         return {
-          action: "💪 Bet 4x - Big Slick!",
+          action: "4x Bet (Big Slick)",
           confidence: 'high',
           reasoning: "AK offsuit is a premium hand",
           stage: 'preflop'
         };
       }
       return {
-        action: "💪 Check - See the flop",
+        action: "2x Bet (Playable)",
         confidence: 'medium',
-        reasoning: "Strong cards but wait for flop",
+        reasoning: "Strong cards but wait for better spot",
         stage: 'preflop'
       };
     }
   }
 
-  // K-x suited
-  if ((rank1 === 'K' || rank2 === 'K') && suited) {
-    return {
-      action: "💪 Check - King suited",
-      confidence: 'medium',
-      reasoning: "Decent hand, see what flop brings",
-      stage: 'preflop'
-    };
-  }
-
-  // Q-x suited (Q-6 or better)
-  if ((rank1 === 'Q' || rank2 === 'Q') && suited) {
-    const otherRank = rank1 === 'Q' ? rank2 : rank1;
+  // K-x suited or Q-x suited (decent kicker)
+  if (((rank1 === 'K' || rank2 === 'K') || (rank1 === 'Q' || rank2 === 'Q')) && suited) {
+    const otherRank = rank1 === 'K' || rank1 === 'Q' ? rank2 : rank1;
     const rankOrder = ['2','3','4','5','6','7','8','9','T','J','Q','K','A'];
     if (rankOrder.indexOf(otherRank) >= 4) { // 6 or better
       return {
-        action: "💪 Check - Queen suited",
+        action: "2x Bet (Playable)",
         confidence: 'medium',
-        reasoning: "Queen with decent kicker",
+        reasoning: "Decent suited hand with potential",
         stage: 'preflop'
       };
     }
@@ -148,16 +139,16 @@ export function getPreflopAdvice(holeCards: Card[]): BettingAdvice {
   
   if (isTrash) {
     return {
-      action: "❌ Fold - Trash hand",
+      action: "Check or Fold",
       confidence: 'high',
       reasoning: "Very weak starting hand",
       stage: 'preflop'
     };
   }
 
-  // Default: check and see the flop
+  // Default: check
   return {
-    action: "⏳ Check - See the flop",
+    action: "Check or Fold",
     confidence: 'medium',
     reasoning: "Marginal hand, wait for more information",
     stage: 'preflop'
@@ -169,52 +160,31 @@ export function getPreflopAdvice(holeCards: Card[]): BettingAdvice {
  * 
  * Ultimate Texas Hold'em Post-flop Strategy:
  * - Bet 3x with strong hands (60%+ win rate)
- * - Check or bet 2x with decent hands (40-60% win rate)
- * - Fold with very weak hands (<30% win rate)
+ * - Bet 2x or Check with decent hands (40-60% win rate)
+ * - Fold with very weak hands (<40% win rate)
  * 
  * @param winPercent Win percentage from Monte Carlo simulation
  * @param stage Current game stage
  * @returns Betting advice object
  */
 export function getPostflopAdvice(winPercent: number, stage: GameStage = 'flop'): BettingAdvice {
-  if (winPercent > 75) {
+  if (winPercent > 60) {
     return {
-      action: "🚀 Bet 3x - Monster hand!",
+      action: "Bet 3x (Strong Position)",
       confidence: 'high',
       reasoning: `${winPercent.toFixed(1)}% win rate is excellent`,
       stage
     };
-  } else if (winPercent > 60) {
-    return {
-      action: "🔥 Bet 3x - Strong position!",
-      confidence: 'high',
-      reasoning: `${winPercent.toFixed(1)}% win rate justifies aggressive betting`,
-      stage
-    };
-  } else if (winPercent > 50) {
-    return {
-      action: "💪 Check or Bet 2x - Good hand",
-      confidence: 'medium',
-      reasoning: `${winPercent.toFixed(1)}% win rate is above average`,
-      stage
-    };
   } else if (winPercent > 40) {
     return {
-      action: "⚖️ Check - Marginal hand",
+      action: "Bet 2x or Check (Decent Chance)",
       confidence: 'medium',
-      reasoning: `${winPercent.toFixed(1)}% win rate is borderline`,
-      stage
-    };
-  } else if (winPercent > 30) {
-    return {
-      action: "⏳ Check - Weak hand",
-      confidence: 'low',
-      reasoning: `${winPercent.toFixed(1)}% win rate is concerning`,
+      reasoning: `${winPercent.toFixed(1)}% win rate is playable`,
       stage
     };
   } else {
     return {
-      action: "❌ Fold - Very weak",
+      action: "Fold (Too Risky)",
       confidence: 'high',
       reasoning: `${winPercent.toFixed(1)}% win rate is too low`,
       stage
@@ -236,51 +206,29 @@ export function getGameStage(cardCount: number): GameStage {
 }
 
 /**
- * Gets advice urgency level for UI styling based on action type
- * 
- * @param advice Betting advice object
- * @returns CSS class string for styling
- */
-export function getAdviceStyle(advice: BettingAdvice): string {
-  const action = advice.action.toLowerCase();
-  
-  if (action.includes("bet 4x") || action.includes("bet 3x")) {
-    return "text-green-400 bg-green-900/20 border-green-500";
-  } else if (action.includes("bet 2x")) {
-    return "text-yellow-400 bg-yellow-900/20 border-yellow-500";
-  } else if (action.includes("check")) {
-    return "text-blue-400 bg-blue-900/20 border-blue-500";
-  } else if (action.includes("fold")) {
-    return "text-red-400 bg-red-900/20 border-red-500";
-  } else {
-    return "text-gray-400 bg-gray-900/20 border-gray-500";
-  }
-}
-
-/**
  * Gets contextual tip message based on game stage
  * 
  * @param stage Current game stage
  * @param cardCount Number of selected cards
  * @returns Tip message string
  */
-export function getStageTip(stage: GameStage, cardCount: number): string {
+export function getTipMessage(stage: GameStage, cardCount: number): string {
   switch (stage) {
     case 'preflop':
-      if (cardCount === 0) return "🃏 Select your 2 hole cards to begin analysis";
+      if (cardCount === 0) return "🃏 Pick 2 hole cards first";
       if (cardCount === 1) return "🃏 Select your second hole card";
-      return "🃏 Pre-flop analysis complete - add flop cards next";
+      return "🃏 Pre-flop analysis complete — add flop cards next";
     
     case 'flop':
       if (cardCount === 3) return "🎯 Flop time — let's see what connects!";
-      if (cardCount === 4) return "🎯 Add one more flop card to complete the flop";
+      if (cardCount === 4) return "🎯 Add one more flop card";
       return "🎯 Flop analysis running — checking your odds";
     
     case 'turn':
-      return "🎲 Turn card added — one more to go!";
+      return "🎲 Turn is where traps are set";
     
     case 'river':
-      return "🏁 River is decision time — final odds calculated";
+      return "🏁 Final card — make the right move";
     
     default:
       return "🃏 Select cards to get started";

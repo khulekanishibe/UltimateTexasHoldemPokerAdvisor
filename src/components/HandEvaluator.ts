@@ -60,42 +60,6 @@ export function getHandRank(cards: string[]): number {
 }
 
 /**
- * Gets detailed hand information including rank and qualifying cards
- * 
- * @param cards Array of card strings
- * @returns Object with hand details
- */
-export function getHandDetails(cards: string[]): {
-  rank: number;
-  description: string;
-  qualifiers: string[];
-} {
-  if (cards.length < 5) {
-    return {
-      rank: 0,
-      description: "Insufficient cards",
-      qualifiers: []
-    };
-  }
-  
-  try {
-    const result = Hand.solve(cards);
-    return {
-      rank: result.rank || 0,
-      description: result.descr || "Unknown hand",
-      qualifiers: result.qualifiers || []
-    };
-  } catch (error) {
-    console.error("Error getting hand details:", error);
-    return {
-      rank: 0,
-      description: "Error evaluating hand",
-      qualifiers: []
-    };
-  }
-}
-
-/**
  * Formats card array for display with suit symbols and proper rank display.
  * Converts 'T' to '10' for better readability.
  * 
@@ -111,33 +75,6 @@ export function formatCards(cards: string[]): string {
     const symbol = suitSymbols[suit as keyof typeof suitSymbols] || suit;
     return `${rank}${symbol}`;
   }).join(' ');
-}
-
-/**
- * Formats cards for display with color coding
- * 
- * @param cards Array of card strings
- * @returns Array of formatted card objects with color information
- */
-export function formatCardsWithColors(cards: string[]): Array<{
-  display: string;
-  isRed: boolean;
-  original: string;
-}> {
-  const suitSymbols = { h: '♥', d: '♦', s: '♠', c: '♣' };
-  
-  return cards.map(card => {
-    const rank = card[0] === 'T' ? '10' : card[0];
-    const suit = card[1];
-    const symbol = suitSymbols[suit as keyof typeof suitSymbols] || suit;
-    const isRed = suit === 'h' || suit === 'd';
-    
-    return {
-      display: `${rank}${symbol}`,
-      isRed,
-      original: card
-    };
-  });
 }
 
 /**
