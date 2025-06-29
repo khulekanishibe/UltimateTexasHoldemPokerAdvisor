@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bot, Loader2, AlertCircle, Sparkles } from 'lucide-react';
+import { Bot, Loader2, AlertCircle, Sparkles, Brain } from 'lucide-react';
 import { formatCards } from './HandEvaluator';
 import type { SimulationResult } from '../utils/monteCarlo';
 import type { GameStage } from './BetAdvisor';
@@ -25,10 +25,107 @@ interface AIAdvice {
 }
 
 /**
- * OpenAI Advisor Component
+ * Generate fallback advice based on simulation results and game theory
+ */
+function generateFallbackAdvice(
+  selectedCards: string[],
+  simulationResult: SimulationResult | null,
+  gameStage: GameStage,
+  handDescription: string
+): AIAdvice {
+  const holeCards = selectedCards.slice(0, 2);
+  const communityCards = selectedCards.slice(2);
+
+  // Pre-flop fallback advice
+  if (gameStage === 'preflop' || !simulationResult) {
+    const [card1, card2] = holeCards;
+    const rank1 = card1?.slice(0, -1);
+    const suit1 = card1?.slice(-1);
+    const rank2 = card2?.slice(0, -1);
+    const suit2 = card2?.slice(-1);
+    
+    const suited = suit1 === suit2;
+    const isPair = rank1 === rank2;
+    const strongRanks = ['A', 'K', 'Q', 'J', '10'];
+    
+    if (isPair && rank1 === 'A') {
+      return {
+        recommendation: "Max Bet 4x",
+        reasoning: "Pocket Aces are the strongest starting hand. Maximum aggression is warranted.",
+        confidence: 'high',
+        riskLevel: 'aggressive'
+      };
+    }
+    
+    if (isPair || (suited && strongRanks.includes(rank1) && strongRanks.includes(rank2))) {
+      return {
+        recommendation: "Bet 4x",
+        reasoning: "Premium starting hand with excellent potential. Strong betting position.",
+        confidence: 'high',
+        riskLevel: 'aggressive'
+      };
+    }
+    
+    return {
+      recommendation: "Check or Small Bet",
+      reasoning: "Marginal starting hand. Wait for more information before committing.",
+      confidence: 'medium',
+      riskLevel: 'conservative'
+    };
+  }
+
+  // Post-flop advice based on simulation
+  const winRate = simulationResult.win;
+  
+  if (winRate >= 70) {
+    return {
+      recommendation: "Bet 3x Aggressively",
+      reasoning: `Excellent ${winRate.toFixed(1)}% win rate. Strong hand with great equity. Maximize value.`,
+      confidence: 'high',
+      riskLevel: 'aggressive'
+    };
+  }
+  
+  if (winRate >= 55) {
+    return {
+      recommendation: "Bet 3x Confidently",
+      reasoning: `Strong ${winRate.toFixed(1)}% win rate gives you a significant edge. Press your advantage.`,
+      confidence: 'high',
+      riskLevel: 'moderate'
+    };
+  }
+  
+  if (winRate >= 45) {
+    return {
+      recommendation: "Bet 2x Cautiously",
+      reasoning: `Favorable ${winRate.toFixed(1)}% win rate. Moderate betting to build pot while managing risk.`,
+      confidence: 'medium',
+      riskLevel: 'moderate'
+    };
+  }
+  
+  if (winRate >= 35) {
+    return {
+      recommendation: "Check and Evaluate",
+      reasoning: `Marginal ${winRate.toFixed(1)}% win rate. See more cards cheaply before committing.`,
+      confidence: 'medium',
+      riskLevel: 'conservative'
+    };
+  }
+  
+  return {
+    recommendation: "Consider Folding",
+    reasoning: `Weak ${winRate.toFixed(1)}% win rate. Cutting losses may be the best strategy.`,
+    confidence: 'high',
+    riskLevel: 'conservative'
+  };
+}
+
+/**
+ * Strategic Advisor Component (formerly OpenAI Advisor)
  * 
- * Integrates with OpenAI API via serverless endpoint to provide 
- * advanced poker strategy advice based on current hand, odds, and game situation.
+ * Provides advanced poker strategy advice using either OpenAI API or
+ * sophisticated fallback logic based on game theory and simulation results.
  */
 export default function OpenAIAdvisor({ 
   selectedCards, 
@@ -38,7 +135,7 @@ export default function OpenAIAdvisor({
 }: OpenAIAdvisorProps) {
   const [aiAdvice, setAiAdvice] = useState<AIAdvice | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [usingFallback, setUsingFallback] = useState(false);
   const [lastRequestCards, setLastRequestCards] = useState<string>('');
   
   // Ref to track current request to prevent race conditions
@@ -83,101 +180,102 @@ Provide your recommendation in JSON format.`;
   };
 
   /**
-   * Call OpenAI API for advanced poker advice via serverless endpoint
+   * Try OpenAI API first, fallback to local logic if it fails
    */
-  const getAIAdvice = async (): Promise<void> => {
+  const getAdvice = async (): Promise<void> => {
     // Increment request counter to cancel any previous requests
     currentRequestRef.current += 1;
     const thisRequest = currentRequestRef.current;
 
     setIsLoading(true);
-    setError(null);
+    setUsingFallback(false);
 
+    // First try OpenAI API
     try {
-      console.log('🤖 Requesting AI advice via serverless endpoint...');
+      console.log('🤖 Attempting OpenAI API request...');
       
       const prompt = generatePrompt();
-      console.log('📝 Generated prompt:', prompt);
+      
+      // Try the API with a shorter timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
 
-      // Call serverless API endpoint (no localhost needed)
       const response = await fetch('/api/openai-advice', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ prompt }),
+        signal: controller.signal
       });
 
-      if (!response.ok) {
-        throw new Error(`API request failed: ${response.status} ${response.statusText}`);
-      }
+      clearTimeout(timeoutId);
 
-      const data = await response.json();
-      console.log('🤖 AI response:', data);
-
-      // Only update if this request is still current
-      if (currentRequestRef.current === thisRequest) {
-        if (!data.success || data.error) {
-          throw new Error(data.error || 'API request failed');
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Only update if this request is still current
+        if (currentRequestRef.current === thisRequest) {
+          if (data.success && data.advice) {
+            console.log('✅ OpenAI API successful');
+            setAiAdvice(data.advice);
+            setIsLoading(false);
+            return;
+          }
         }
-
-        const advice: AIAdvice = data.advice;
-
-        // Validate advice structure
-        if (!advice.recommendation || !advice.reasoning) {
-          throw new Error('Invalid advice format received');
-        }
-
-        setAiAdvice(advice);
-        setIsLoading(false);
-        console.log('✅ AI advice updated:', advice);
-      } else {
-        console.log('❌ AI request was superseded');
       }
-
-    } catch (err) {
-      console.error('💥 AI advice request failed:', err);
       
-      // Only update if this request is still current
+      throw new Error(`API failed: ${response.status}`);
+
+    } catch (error) {
+      console.log('⚠️ OpenAI API failed, using fallback logic:', error);
+      
+      // Only proceed with fallback if this request is still current
       if (currentRequestRef.current === thisRequest) {
-        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-        setError(errorMessage);
+        // Use fallback logic
+        const fallbackAdvice = generateFallbackAdvice(selectedCards, simulationResult, gameStage, handDescription);
+        
+        setAiAdvice(fallbackAdvice);
+        setUsingFallback(true);
         setIsLoading(false);
+        
+        console.log('🧠 Fallback advice generated:', fallbackAdvice);
       }
     }
   };
 
   /**
-   * Effect to trigger AI advice when conditions are met
+   * Effect to trigger advice when conditions are met
    */
   useEffect(() => {
-    // Only request AI advice for post-flop situations with simulation results
-    if (selectedCards.length >= 5 && simulationResult && !isLoading) {
+    // Provide advice for any hand with 2+ cards
+    if (selectedCards.length >= 2 && !isLoading) {
       const cardsKey = selectedCards.join(',');
       
       // Avoid duplicate requests for the same cards
       if (cardsKey !== lastRequestCards) {
         setLastRequestCards(cardsKey);
         
-        // Add small delay to let Monte Carlo complete
+        // Add small delay for post-flop to let Monte Carlo complete
+        const delay = selectedCards.length >= 5 && simulationResult ? 500 : 100;
         const timer = setTimeout(() => {
-          getAIAdvice();
-        }, 500);
+          getAdvice();
+        }, delay);
 
         return () => clearTimeout(timer);
       }
-    } else {
-      // Clear AI advice for pre-flop or insufficient cards
+    } else if (selectedCards.length < 2) {
+      // Clear advice for insufficient cards
       setAiAdvice(null);
-      setError(null);
+      setUsingFallback(false);
       setLastRequestCards('');
     }
   }, [selectedCards, simulationResult]);
 
   /**
-   * Get styling for AI advice based on risk level
+   * Get styling for advice based on risk level
    */
-  const getAIAdviceStyle = (riskLevel: string): string => {
+  const getAdviceStyle = (riskLevel: string): string => {
     switch (riskLevel) {
       case 'conservative':
         return 'bg-blue-900/20 border-blue-500 text-blue-400';
@@ -188,47 +286,42 @@ Provide your recommendation in JSON format.`;
     }
   };
 
-  // Always render the AI section (even for pre-flop)
   return (
     <div>
       <div className="flex items-center gap-2 mb-2">
-        <Bot className="h-3 w-3 text-blue-500" />
-        <h4 className="text-xs font-bold text-blue-400">AI Strategic Advisor</h4>
+        {usingFallback ? (
+          <Brain className="h-3 w-3 text-purple-500" />
+        ) : (
+          <Bot className="h-3 w-3 text-blue-500" />
+        )}
+        <h4 className="text-xs font-bold text-blue-400">
+          {usingFallback ? 'Strategic Advisor' : 'AI Strategic Advisor'}
+        </h4>
         <Sparkles className="h-2 w-2 text-yellow-400" />
       </div>
 
-      {selectedCards.length < 5 && (
+      {selectedCards.length < 2 && (
         <div className="text-center py-2">
           <p className="text-xs text-gray-500">
-            AI advisor available after Monte Carlo simulation
+            Strategic advice available after selecting hole cards
           </p>
         </div>
       )}
 
-      {selectedCards.length >= 5 && (
+      {selectedCards.length >= 2 && (
         <>
           {isLoading && (
             <div className="flex items-center justify-center py-3">
               <Loader2 className="h-3 w-3 animate-spin text-blue-500 mr-2" />
-              <span className="text-xs text-gray-400">Consulting AI...</span>
-            </div>
-          )}
-
-          {error && (
-            <div className="flex items-center gap-2 p-2 bg-red-900/20 border border-red-500 rounded text-red-400">
-              <AlertCircle className="h-2 w-2" />
-              <div className="text-xs">
-                <p className="font-medium">AI Unavailable</p>
-                <p className="text-red-300 mt-1 text-xs">{error}</p>
-              </div>
+              <span className="text-xs text-gray-400">Analyzing strategy...</span>
             </div>
           )}
 
           {aiAdvice && !isLoading && (
-            <div className={`p-2 rounded-lg border ${getAIAdviceStyle(aiAdvice.riskLevel)}`}>
+            <div className={`p-2 rounded-lg border ${getAdviceStyle(aiAdvice.riskLevel)}`}>
               <div className="flex items-center justify-between mb-1">
                 <p className="text-xs font-bold">
-                  🤖 {aiAdvice.recommendation}
+                  {usingFallback ? '🧠' : '🤖'} {aiAdvice.recommendation}
                 </p>
                 <div className="flex gap-1">
                   <span className={`px-1 py-0.5 rounded text-xs ${
@@ -248,14 +341,13 @@ Provide your recommendation in JSON format.`;
               <p className="text-xs opacity-90 leading-relaxed">
                 {aiAdvice.reasoning}
               </p>
-            </div>
-          )}
-
-          {!aiAdvice && !isLoading && !error && (
-            <div className="text-center py-2">
-              <p className="text-xs text-gray-500">
-                AI will analyze after simulation completes
-              </p>
+              {usingFallback && (
+                <div className="mt-1 pt-1 border-t border-gray-600">
+                  <p className="text-xs text-gray-400 italic">
+                    Using advanced game theory (OpenAI unavailable)
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </>
