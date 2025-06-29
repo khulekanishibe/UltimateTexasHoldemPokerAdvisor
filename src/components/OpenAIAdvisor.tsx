@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bot, Loader2, AlertCircle, Sparkles, Brain, Zap } from 'lucide-react';
+import { Bot, Loader2, AlertCircle, Sparkles, Brain, Zap, Key } from 'lucide-react';
 import { formatCards } from './HandEvaluator';
 import type { SimulationResult } from '../utils/monteCarlo';
 import type { GameStage } from './BetAdvisor';
@@ -138,6 +138,7 @@ export default function OpenAIAdvisor({
   const [usingFallback, setUsingFallback] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const [lastRequestCards, setLastRequestCards] = useState<string>('');
+  const [needsApiKey, setNeedsApiKey] = useState(false);
   
   // Ref to track current request to prevent race conditions
   const currentRequestRef = useRef<number>(0);
@@ -195,6 +196,7 @@ Provide your recommendation in JSON format with these exact fields:
     setIsLoading(true);
     setUsingFallback(false);
     setApiError(null);
+    setNeedsApiKey(false);
 
     // First try OpenAI API
     try {
@@ -234,7 +236,14 @@ Provide your recommendation in JSON format with these exact fields:
         }
       } else {
         const errorData = await response.json();
-        throw new Error(errorData.error || `API failed: ${response.status}`);
+        const errorMessage = errorData.error || `API failed: ${response.status}`;
+        
+        // Check if it's an API key issue
+        if (errorMessage.includes('API key') || errorMessage.includes('not configured')) {
+          setNeedsApiKey(true);
+        }
+        
+        throw new Error(errorMessage);
       }
 
     } catch (error) {
@@ -244,6 +253,11 @@ Provide your recommendation in JSON format with these exact fields:
       // Only proceed with fallback if this request is still current
       if (currentRequestRef.current === thisRequest) {
         setApiError(errorMessage);
+        
+        // Check if it's an API key configuration issue
+        if (errorMessage.includes('API key') || errorMessage.includes('not configured')) {
+          setNeedsApiKey(true);
+        }
         
         // Use fallback logic
         const fallbackAdvice = generateFallbackAdvice(selectedCards, simulationResult, gameStage, handDescription);
@@ -282,6 +296,7 @@ Provide your recommendation in JSON format with these exact fields:
       setAiAdvice(null);
       setUsingFallback(false);
       setApiError(null);
+      setNeedsApiKey(false);
       setLastRequestCards('');
     }
   }, [selectedCards, simulationResult]);
@@ -313,6 +328,7 @@ Provide your recommendation in JSON format with these exact fields:
         </h4>
         {!usingFallback && !apiError && <Zap className="h-2 w-2 text-green-400" />}
         {apiError && <AlertCircle className="h-2 w-2 text-red-400" />}
+        {needsApiKey && <Key className="h-2 w-2 text-yellow-400" />}
       </div>
 
       {selectedCards.length < 2 && (
@@ -329,6 +345,21 @@ Provide your recommendation in JSON format with these exact fields:
             <div className="flex items-center justify-center py-3">
               <Loader2 className="h-3 w-3 animate-spin text-blue-500 mr-2" />
               <span className="text-xs text-gray-400">Analyzing strategy...</span>
+            </div>
+          )}
+
+          {needsApiKey && !isLoading && (
+            <div className="p-2 rounded-lg border border-yellow-500 bg-yellow-900/20 text-yellow-400 mb-2">
+              <div className="flex items-center gap-1 mb-1">
+                <Key className="h-3 w-3" />
+                <p className="text-xs font-bold">OpenAI Setup Required</p>
+              </div>
+              <p className="text-xs opacity-90 mb-2">
+                Add your OpenAI API key to the .env file to enable AI advice
+              </p>
+              <div className="text-xs bg-gray-800 p-1 rounded font-mono">
+                OPENAI_API_KEY=sk-your-key-here
+              </div>
             </div>
           )}
 
@@ -363,7 +394,7 @@ Provide your recommendation in JSON format with these exact fields:
                   <p className="text-xs text-gray-400 italic flex items-center gap-1">
                     <Brain className="h-2 w-2" />
                     Using advanced game theory
-                    {apiError && <span className="text-red-400">({apiError})</span>}
+                    {apiError && !needsApiKey && <span className="text-red-400">({apiError})</span>}
                   </p>
                 )}
                 {!usingFallback && !apiError && (
