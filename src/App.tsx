@@ -271,7 +271,7 @@ export default function App() {
         <div className="h-full grid grid-cols-12 grid-rows-12 gap-3">
           
           {/* Betting Advice - Top Full Width */}
-          <div className="col-span-12 row-span-4 bg-gray-800/90 backdrop-blur-sm rounded-xl p-4 border border-gray-700 shadow-xl">
+          <div className="bg-gray-800 p-6 rounded-lg shadow-lg lg:col-span-1">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-lg font-bold flex items-center gap-2">
                 <Target className="h-4 w-4 text-yellow-500" />
