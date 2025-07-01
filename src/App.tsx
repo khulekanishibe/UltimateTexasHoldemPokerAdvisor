@@ -298,277 +298,662 @@ export default function App() {
         <div className="text-center font-medium">{tipMessage}</div>
       </div>
 
-      {/* Main Grid Layout */}
-      <div className="h-[calc(100vh-140px)] p-4">
-        <div className="h-full grid grid-cols-12 grid-rows-12 gap-3">
-          {/* Betting Advice - Top Full Width */}
-          <div className="bg-gray-800 p-6 rounded-lg shadow-lg lg:col-span-1">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-bold flex items-center gap-2">
-                <Target className="h-4 w-4 text-yellow-500" />
-                Betting Advice
-                {advice.confidence === "high" && !isSimulating && (
-                  <Zap className="h-3 w-3 text-yellow-400" />
-                )}
-                {isSimulating && (
-                  <Clock className="h-3 w-3 text-blue-400 animate-spin" />
-                )}
-              </h2>
+      {/* Layout Controls */}
+      <div className="flex justify-center gap-2 px-4 py-2 bg-gray-900/50">
+        <button
+          onClick={() =>
+            setLayoutMode(layoutMode === "grid" ? "stacked" : "grid")
+          }
+          className="text-xs bg-gray-700 hover:bg-gray-600 px-3 py-1 rounded-lg transition-colors"
+        >
+          {layoutMode === "grid" ? "📱 Stack" : "🌐 Grid"}
+        </button>
+        <button
+          onClick={() => setCardPickerExpanded(!cardPickerExpanded)}
+          className="text-xs bg-blue-700 hover:bg-blue-600 px-3 py-1 rounded-lg transition-colors"
+        >
+          {cardPickerExpanded ? "🔽 Normal" : "🔼 Expand Cards"}
+        </button>
+      </div>
 
-              {/* Fast Mode Toggle */}
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-400">Fast Mode</span>
-                <button
-                  onClick={() => setFastMode(!fastMode)}
-                  disabled={isSimulating}
-                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-                    fastMode ? "bg-green-600" : "bg-gray-600"
-                  } ${isSimulating ? "opacity-50 cursor-not-allowed" : ""}`}
-                >
-                  <span
-                    className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
-                      fastMode ? "translate-x-5" : "translate-x-1"
-                    }`}
-                  />
-                </button>
-                <span className="text-xs text-gray-500">
-                  {fastMode ? "300" : "1000"}
+      {/* Main Layout */}
+      <div className="h-[calc(100vh-180px)] p-4">
+        {cardPickerExpanded ? (
+          /* Full Screen Card Picker */
+          <div className="h-full bg-gray-800/90 backdrop-blur-sm rounded-xl p-6 border border-gray-700 shadow-xl">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <Calculator className="h-6 w-6 text-yellow-500" />
+                <h2 className="text-xl font-bold">Select Your Cards</h2>
+                <span className="text-sm text-gray-300">
+                  ({selectedCards.length}/7)
                 </span>
               </div>
+              <button
+                onClick={() => setCardPickerExpanded(false)}
+                className="bg-gray-600 hover:bg-gray-500 px-4 py-2 rounded-lg text-sm transition-colors"
+              >
+                ✕ Close
+              </button>
             </div>
-
-            <div
-              className={`p-3 rounded-xl border-2 ${getAdviceStyle(advice)} shadow-lg mb-3`}
-            >
-              <p className="text-lg font-bold text-center mb-1">
-                {advice.action}
-              </p>
-              <p className="text-center text-xs opacity-90 mb-2">
-                {advice.reasoning}
-              </p>
-              <div className="flex justify-center items-center gap-3 text-xs">
-                <span
-                  className={`px-2 py-1 rounded ${
-                    advice.confidence === "high"
-                      ? "bg-green-600"
-                      : advice.confidence === "medium"
-                        ? "bg-yellow-600"
-                        : "bg-gray-600"
-                  }`}
-                >
-                  {advice.confidence.toUpperCase()}
-                </span>
-                <span className="px-2 py-1 rounded bg-gray-700">
-                  {advice.stage.toUpperCase()}
-                </span>
-                {isSimulating && (
-                  <span className="px-2 py-1 rounded bg-blue-600 animate-pulse">
-                    CALCULATING
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Error Display */}
-            {simulationError && (
-              <div className="mt-2 p-2 bg-red-900/20 border border-red-500 rounded-lg">
-                <p className="text-xs text-red-400 font-medium">
-                  ⚠️ Error: {simulationError}
-                </p>
-                <button
-                  onClick={handleReset}
-                  className="mt-1 bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded text-xs"
-                >
-                  Reset
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Hand Analysis - Left Side (Smaller) */}
-          <div className="col-span-2 row-span-8 bg-gray-800/90 backdrop-blur-sm rounded-xl p-3 border border-gray-700 shadow-xl">
-            <h3 className="text-xs font-bold mb-3 flex items-center gap-2">
-              <Spades className="h-3 w-3 text-yellow-500" />
-              Hand Analysis
-            </h3>
-
-            <div className="space-y-3 text-xs">
-              <div>
-                <p className="text-gray-400 mb-1">
-                  Cards ({selectedCards.length}/7)
-                </p>
-                <p className="font-mono text-xs text-white break-all">
-                  {selectedCards.length > 0
-                    ? formatCards(selectedCards)
-                    : "None"}
-                </p>
-              </div>
-
-              {holeCards.length === 2 && (
-                <div>
-                  <p className="text-gray-400 mb-1">🃏 Hole Cards</p>
-                  <p className="font-mono text-xs text-blue-400 font-bold">
-                    {formatCards(holeCards)}
-                  </p>
-                  {isPremiumHand(holeCards) && (
-                    <p className="text-xs text-yellow-400 mt-1">⭐ Premium</p>
-                  )}
-                </div>
-              )}
-
-              {communityCards.length > 0 && (
-                <div>
-                  <p className="text-gray-400 mb-1">🏘️ Community</p>
-                  <p className="font-mono text-xs text-green-400 font-bold break-all">
-                    {formatCards(communityCards)}
-                  </p>
-                </div>
-              )}
-
-              <div>
-                <p className="text-gray-400 mb-1">🏆 Best Hand</p>
-                <p className="font-bold text-xs text-yellow-500">
-                  {handDescription}
-                </p>
-              </div>
-
-              <div className="pt-2 border-t border-gray-600">
-                <p className="text-gray-400 mb-2">🎯 Stage</p>
-                <div className="flex flex-col gap-1">
-                  <span
-                    className={`px-2 py-1 rounded-full text-xs font-bold text-center ${
-                      gameStage === "preflop"
-                        ? "bg-blue-600"
-                        : gameStage === "flop"
-                          ? "bg-green-600"
-                          : gameStage === "turn"
-                            ? "bg-yellow-600"
-                            : "bg-red-600"
-                    }`}
-                  >
-                    {gameStage.toUpperCase()}
-                  </span>
-                </div>
-              </div>
-
-              {/* Reset Button */}
-              {selectedCards.length > 0 && (
-                <div className="pt-2">
-                  <button
-                    onClick={handleReset}
-                    className="w-full bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded-lg font-medium transition-colors duration-200 text-xs"
-                  >
-                    Reset Hand
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Card Picker - Center (Expanded) */}
-          <div className="col-span-8 row-span-8 bg-gray-800/90 backdrop-blur-sm rounded-xl p-3 border border-gray-700 shadow-xl overflow-hidden">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <Calculator className="h-4 w-4 text-yellow-500" />
-                <h2 className="text-sm font-bold">Select Your Cards</h2>
-              </div>
-              <div className="text-xs text-gray-300">
-                {selectedCards.length}/7
-              </div>
-            </div>
-            <div className="h-[calc(100%-2rem)] overflow-auto">
+            <div className="h-[calc(100%-4rem)] overflow-auto">
               <CardPicker
                 onSelect={setSelectedCards}
                 selectedCards={selectedCards}
               />
             </div>
           </div>
+        ) : layoutMode === "stacked" ? (
+          /* Stacked Mobile-Friendly Layout */
+          <div className="h-full flex flex-col gap-3 overflow-auto">
+            {/* Betting Advice */}
+            <div className="bg-gray-800 p-4 rounded-lg shadow-lg flex-shrink-0">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-lg font-bold flex items-center gap-2">
+                  <Target className="h-4 w-4 text-yellow-500" />
+                  Betting Advice
+                  {advice.confidence === "high" && !isSimulating && (
+                    <Zap className="h-3 w-3 text-yellow-400" />
+                  )}
+                  {isSimulating && (
+                    <Clock className="h-3 w-3 text-blue-400 animate-spin" />
+                  )}
+                </h2>
 
-          {/* Monte Carlo Simulation + AI Advisor - Right Side (Smaller) */}
-          <div className="col-span-2 row-span-8 bg-gray-800/90 backdrop-blur-sm rounded-xl p-3 border border-gray-700 shadow-xl">
-            <h3 className="text-xs font-bold mb-3 flex items-center gap-2">
-              <TrendingUp className="h-3 w-3 text-yellow-500" />
-              Monte Carlo
-              {fastMode && (
-                <span className="text-xs bg-green-600 px-1 py-0.5 rounded">
-                  FAST
-                </span>
-              )}
-            </h3>
-
-            {isSimulating && (
-              <div className="flex flex-col items-center justify-center py-4">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-yellow-500 mb-2"></div>
-                <span className="text-gray-400 font-medium text-xs text-center">
-                  Running {fastMode ? "300" : "1,000"} simulations...
-                </span>
+                {/* Fast Mode Toggle */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-400">Fast Mode</span>
+                  <button
+                    onClick={() => setFastMode(!fastMode)}
+                    disabled={isSimulating}
+                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                      fastMode ? "bg-green-600" : "bg-gray-600"
+                    } ${isSimulating ? "opacity-50 cursor-not-allowed" : ""}`}
+                  >
+                    <span
+                      className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+                        fastMode ? "translate-x-5" : "translate-x-1"
+                      }`}
+                    />
+                  </button>
+                  <span className="text-xs text-gray-500">
+                    {fastMode ? "300" : "1000"}
+                  </span>
+                </div>
               </div>
-            )}
 
-            {simulationResult && !isSimulating && !simulationError && (
-              <div className="space-y-2 mb-4">
-                <ProgressBar
-                  label="Win"
-                  value={simulationResult.win}
-                  color="bg-gradient-to-r from-green-600 to-green-500"
-                  icon={<span className="text-green-400">🏆</span>}
-                />
-                <ProgressBar
-                  label="Tie"
-                  value={simulationResult.tie}
-                  color="bg-gradient-to-r from-blue-600 to-blue-500"
-                  icon={<span className="text-blue-400">🤝</span>}
-                />
-                <ProgressBar
-                  label="Lose"
-                  value={simulationResult.lose}
-                  color="bg-gradient-to-r from-red-600 to-red-500"
-                  icon={<span className="text-red-400">💔</span>}
-                />
+              <div
+                className={`p-3 rounded-xl border-2 ${getAdviceStyle(advice)} shadow-lg mb-3`}
+              >
+                <p className="text-lg font-bold text-center mb-1">
+                  {advice.action}
+                </p>
+                <p className="text-center text-xs opacity-90 mb-2">
+                  {advice.reasoning}
+                </p>
+                <div className="flex justify-center items-center gap-3 text-xs">
+                  <span
+                    className={`px-2 py-1 rounded ${
+                      advice.confidence === "high"
+                        ? "bg-green-600"
+                        : advice.confidence === "medium"
+                          ? "bg-yellow-600"
+                          : "bg-gray-600"
+                    }`}
+                  >
+                    {advice.confidence.toUpperCase()}
+                  </span>
+                  <span className="px-2 py-1 rounded bg-gray-700">
+                    {advice.stage.toUpperCase()}
+                  </span>
+                  {isSimulating && (
+                    <span className="px-2 py-1 rounded bg-blue-600 animate-pulse">
+                      CALCULATING
+                    </span>
+                  )}
+                </div>
+              </div>
 
-                <div className="pt-2 border-t border-gray-600">
-                  <div className="text-xs text-gray-400 text-center">
-                    {simulationResult.iterations.toLocaleString()} iterations
+              {/* Error Display */}
+              {simulationError && (
+                <div className="mt-2 p-2 bg-red-900/20 border border-red-500 rounded-lg">
+                  <p className="text-xs text-red-400 font-medium">
+                    ⚠️ Error: {simulationError}
+                  </p>
+                  <button
+                    onClick={handleReset}
+                    className="mt-1 bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded text-xs"
+                  >
+                    Reset
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Card Picker */}
+            <div className="bg-gray-800/90 backdrop-blur-sm rounded-xl p-4 border border-gray-700 shadow-xl flex-1 min-h-0">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Calculator className="h-4 w-4 text-yellow-500" />
+                  <h2 className="text-sm font-bold">Select Your Cards</h2>
+                </div>
+                <div className="text-xs text-gray-300">
+                  {selectedCards.length}/7
+                </div>
+              </div>
+              <div className="h-[calc(100%-2rem)] overflow-auto">
+                <CardPicker
+                  onSelect={setSelectedCards}
+                  selectedCards={selectedCards}
+                />
+              </div>
+            </div>
+
+            {/* Side panels in row for stacked layout */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 flex-shrink-0">
+              {/* Hand Analysis */}
+              <div className="bg-gray-800/90 backdrop-blur-sm rounded-xl p-3 border border-gray-700 shadow-xl">
+                <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
+                  <Spades className="h-4 w-4 text-yellow-500" />
+                  Hand Analysis
+                </h3>
+
+                <div className="space-y-3 text-sm">
+                  <div>
+                    <p className="text-gray-400 mb-1">
+                      Cards ({selectedCards.length}/7)
+                    </p>
+                    <p className="font-mono text-sm text-white break-all">
+                      {selectedCards.length > 0
+                        ? formatCards(selectedCards)
+                        : "None"}
+                    </p>
                   </div>
+
+                  {holeCards.length === 2 && (
+                    <div>
+                      <p className="text-gray-400 mb-1">🃏 Hole Cards</p>
+                      <p className="font-mono text-sm text-blue-400 font-bold">
+                        {formatCards(holeCards)}
+                      </p>
+                      {isPremiumHand(holeCards) && (
+                        <p className="text-sm text-yellow-400 mt-1">
+                          ⭐ Premium
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {communityCards.length > 0 && (
+                    <div>
+                      <p className="text-gray-400 mb-1">🏘️ Community</p>
+                      <p className="font-mono text-sm text-green-400 font-bold break-all">
+                        {formatCards(communityCards)}
+                      </p>
+                    </div>
+                  )}
+
+                  <div>
+                    <p className="text-gray-400 mb-1">🏆 Best Hand</p>
+                    <p className="font-bold text-sm text-yellow-500">
+                      {handDescription}
+                    </p>
+                  </div>
+
+                  <div className="pt-2 border-t border-gray-600">
+                    <p className="text-gray-400 mb-2">🎯 Stage</p>
+                    <div className="flex flex-col gap-1">
+                      <span
+                        className={`px-2 py-1 rounded-full text-sm font-bold text-center ${
+                          gameStage === "preflop"
+                            ? "bg-blue-600"
+                            : gameStage === "flop"
+                              ? "bg-green-600"
+                              : gameStage === "turn"
+                                ? "bg-yellow-600"
+                                : "bg-red-600"
+                        }`}
+                      >
+                        {gameStage.toUpperCase()}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Reset Button */}
+                  {selectedCards.length > 0 && (
+                    <div className="pt-2">
+                      <button
+                        onClick={handleReset}
+                        className="w-full bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded-lg font-medium transition-colors duration-200 text-sm"
+                      >
+                        Reset Hand
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
-            )}
 
-            {simulationError && (
-              <div className="text-center py-4 text-red-400 mb-4">
-                <div className="text-xl mb-2">⚠️</div>
-                <p className="text-xs font-medium">Simulation Error</p>
-                <button
-                  onClick={handleReset}
-                  className="mt-2 bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded text-xs"
-                >
-                  Reset
-                </button>
-              </div>
-            )}
+              {/* Monte Carlo + AI */}
+              <div className="bg-gray-800/90 backdrop-blur-sm rounded-xl p-3 border border-gray-700 shadow-xl">
+                <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-yellow-500" />
+                  Monte Carlo & AI
+                  {fastMode && (
+                    <span className="text-xs bg-green-600 px-1 py-0.5 rounded">
+                      FAST
+                    </span>
+                  )}
+                </h3>
 
-            {!simulationResult &&
-              !isSimulating &&
-              selectedCards.length < 5 &&
-              !simulationError && (
-                <div className="text-center py-4 text-gray-500 mb-4">
-                  <Calculator className="h-6 w-6 mx-auto mb-2 opacity-50" />
-                  <p className="text-xs font-medium">Select 5+ cards</p>
-                  <p className="text-xs">for simulation</p>
+                {isSimulating && (
+                  <div className="flex flex-col items-center justify-center py-4">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-yellow-500 mb-2"></div>
+                    <span className="text-gray-400 font-medium text-sm text-center">
+                      Running {fastMode ? "300" : "1,000"} simulations...
+                    </span>
+                  </div>
+                )}
+
+                {simulationResult && !isSimulating && !simulationError && (
+                  <div className="space-y-2 mb-4">
+                    <ProgressBar
+                      label="Win"
+                      value={simulationResult.win}
+                      color="bg-gradient-to-r from-green-600 to-green-500"
+                      icon={<span className="text-green-400">🏆</span>}
+                    />
+                    <ProgressBar
+                      label="Tie"
+                      value={simulationResult.tie}
+                      color="bg-gradient-to-r from-blue-600 to-blue-500"
+                      icon={<span className="text-blue-400">🤝</span>}
+                    />
+                    <ProgressBar
+                      label="Lose"
+                      value={simulationResult.lose}
+                      color="bg-gradient-to-r from-red-600 to-red-500"
+                      icon={<span className="text-red-400">💔</span>}
+                    />
+
+                    <div className="pt-2 border-t border-gray-600">
+                      <div className="text-xs text-gray-400 text-center">
+                        {simulationResult.iterations.toLocaleString()}{" "}
+                        iterations
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {simulationError && (
+                  <div className="text-center py-4 text-red-400 mb-4">
+                    <div className="text-xl mb-2">⚠️</div>
+                    <p className="text-sm font-medium">Simulation Error</p>
+                    <button
+                      onClick={handleReset}
+                      className="mt-2 bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded text-sm"
+                    >
+                      Reset
+                    </button>
+                  </div>
+                )}
+
+                {!simulationResult &&
+                  !isSimulating &&
+                  selectedCards.length < 5 &&
+                  !simulationError && (
+                    <div className="text-center py-4 text-gray-500 mb-4">
+                      <Calculator className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm font-medium">Select 5+ cards</p>
+                      <p className="text-sm">for simulation</p>
+                    </div>
+                  )}
+
+                {/* AI Advisor Component */}
+                <div className="border-t border-gray-600 pt-3">
+                  <OpenAIAdvisor
+                    selectedCards={selectedCards}
+                    simulationResult={simulationResult}
+                    gameStage={gameStage}
+                    handDescription={handDescription}
+                  />
                 </div>
-              )}
-
-            {/* AI Advisor Component - Integrated in same box */}
-            <div className="border-t border-gray-600 pt-3">
-              <OpenAIAdvisor
-                selectedCards={selectedCards}
-                simulationResult={simulationResult}
-                gameStage={gameStage}
-                handDescription={handDescription}
-              />
+              </div>
             </div>
           </div>
-        </div>
+        ) : (
+          /* Grid Layout with Collapsible Panels */
+          <div className="h-full flex gap-3">
+            {/* Left Panel - Hand Analysis */}
+            <div
+              className={`bg-gray-800/90 backdrop-blur-sm rounded-xl border border-gray-700 shadow-xl transition-all duration-300 ${
+                leftPanelCollapsed ? "w-12" : "w-72"
+              }`}
+            >
+              {leftPanelCollapsed ? (
+                <div className="p-2">
+                  <button
+                    onClick={() => setLeftPanelCollapsed(false)}
+                    className="w-full bg-gray-700 hover:bg-gray-600 p-2 rounded-lg transition-colors"
+                    title="Expand Hand Analysis"
+                  >
+                    <Spades className="h-4 w-4 text-yellow-500 mx-auto" />
+                  </button>
+                </div>
+              ) : (
+                <div className="p-3 h-full flex flex-col">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-bold flex items-center gap-2">
+                      <Spades className="h-4 w-4 text-yellow-500" />
+                      Hand Analysis
+                    </h3>
+                    <button
+                      onClick={() => setLeftPanelCollapsed(true)}
+                      className="text-gray-400 hover:text-white transition-colors"
+                      title="Collapse"
+                    >
+                      ◀
+                    </button>
+                  </div>
+
+                  <div className="space-y-3 text-sm flex-1 overflow-auto">
+                    <div>
+                      <p className="text-gray-400 mb-1">
+                        Cards ({selectedCards.length}/7)
+                      </p>
+                      <p className="font-mono text-sm text-white break-all">
+                        {selectedCards.length > 0
+                          ? formatCards(selectedCards)
+                          : "None"}
+                      </p>
+                    </div>
+
+                    {holeCards.length === 2 && (
+                      <div>
+                        <p className="text-gray-400 mb-1">🃏 Hole Cards</p>
+                        <p className="font-mono text-sm text-blue-400 font-bold">
+                          {formatCards(holeCards)}
+                        </p>
+                        {isPremiumHand(holeCards) && (
+                          <p className="text-sm text-yellow-400 mt-1">
+                            ⭐ Premium
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {communityCards.length > 0 && (
+                      <div>
+                        <p className="text-gray-400 mb-1">🏘️ Community</p>
+                        <p className="font-mono text-sm text-green-400 font-bold break-all">
+                          {formatCards(communityCards)}
+                        </p>
+                      </div>
+                    )}
+
+                    <div>
+                      <p className="text-gray-400 mb-1">🏆 Best Hand</p>
+                      <p className="font-bold text-sm text-yellow-500">
+                        {handDescription}
+                      </p>
+                    </div>
+
+                    <div className="pt-2 border-t border-gray-600">
+                      <p className="text-gray-400 mb-2">🎯 Stage</p>
+                      <div className="flex flex-col gap-1">
+                        <span
+                          className={`px-2 py-1 rounded-full text-sm font-bold text-center ${
+                            gameStage === "preflop"
+                              ? "bg-blue-600"
+                              : gameStage === "flop"
+                                ? "bg-green-600"
+                                : gameStage === "turn"
+                                  ? "bg-yellow-600"
+                                  : "bg-red-600"
+                          }`}
+                        >
+                          {gameStage.toUpperCase()}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Reset Button */}
+                    {selectedCards.length > 0 && (
+                      <div className="pt-2">
+                        <button
+                          onClick={handleReset}
+                          className="w-full bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded-lg font-medium transition-colors duration-200 text-sm"
+                        >
+                          Reset Hand
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Center Panel - Betting Advice + Card Picker */}
+            <div className="flex-1 flex flex-col gap-3">
+              {/* Betting Advice */}
+              <div className="bg-gray-800 p-4 rounded-lg shadow-lg">
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-lg font-bold flex items-center gap-2">
+                    <Target className="h-4 w-4 text-yellow-500" />
+                    Betting Advice
+                    {advice.confidence === "high" && !isSimulating && (
+                      <Zap className="h-3 w-3 text-yellow-400" />
+                    )}
+                    {isSimulating && (
+                      <Clock className="h-3 w-3 text-blue-400 animate-spin" />
+                    )}
+                  </h2>
+
+                  {/* Fast Mode Toggle */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-400">Fast Mode</span>
+                    <button
+                      onClick={() => setFastMode(!fastMode)}
+                      disabled={isSimulating}
+                      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                        fastMode ? "bg-green-600" : "bg-gray-600"
+                      } ${isSimulating ? "opacity-50 cursor-not-allowed" : ""}`}
+                    >
+                      <span
+                        className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+                          fastMode ? "translate-x-5" : "translate-x-1"
+                        }`}
+                      />
+                    </button>
+                    <span className="text-xs text-gray-500">
+                      {fastMode ? "300" : "1000"}
+                    </span>
+                  </div>
+                </div>
+
+                <div
+                  className={`p-3 rounded-xl border-2 ${getAdviceStyle(advice)} shadow-lg mb-3`}
+                >
+                  <p className="text-lg font-bold text-center mb-1">
+                    {advice.action}
+                  </p>
+                  <p className="text-center text-xs opacity-90 mb-2">
+                    {advice.reasoning}
+                  </p>
+                  <div className="flex justify-center items-center gap-3 text-xs">
+                    <span
+                      className={`px-2 py-1 rounded ${
+                        advice.confidence === "high"
+                          ? "bg-green-600"
+                          : advice.confidence === "medium"
+                            ? "bg-yellow-600"
+                            : "bg-gray-600"
+                      }`}
+                    >
+                      {advice.confidence.toUpperCase()}
+                    </span>
+                    <span className="px-2 py-1 rounded bg-gray-700">
+                      {advice.stage.toUpperCase()}
+                    </span>
+                    {isSimulating && (
+                      <span className="px-2 py-1 rounded bg-blue-600 animate-pulse">
+                        CALCULATING
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Error Display */}
+                {simulationError && (
+                  <div className="mt-2 p-2 bg-red-900/20 border border-red-500 rounded-lg">
+                    <p className="text-xs text-red-400 font-medium">
+                      ⚠️ Error: {simulationError}
+                    </p>
+                    <button
+                      onClick={handleReset}
+                      className="mt-1 bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded text-xs"
+                    >
+                      Reset
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Card Picker */}
+              <div className="bg-gray-800/90 backdrop-blur-sm rounded-xl p-4 border border-gray-700 shadow-xl flex-1 min-h-0">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Calculator className="h-4 w-4 text-yellow-500" />
+                    <h2 className="text-sm font-bold">Select Your Cards</h2>
+                  </div>
+                  <div className="text-xs text-gray-300">
+                    {selectedCards.length}/7
+                  </div>
+                </div>
+                <div className="h-[calc(100%-2rem)] overflow-auto">
+                  <CardPicker
+                    onSelect={setSelectedCards}
+                    selectedCards={selectedCards}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Right Panel - Monte Carlo + AI */}
+            <div
+              className={`bg-gray-800/90 backdrop-blur-sm rounded-xl border border-gray-700 shadow-xl transition-all duration-300 ${
+                rightPanelCollapsed ? "w-12" : "w-72"
+              }`}
+            >
+              {rightPanelCollapsed ? (
+                <div className="p-2">
+                  <button
+                    onClick={() => setRightPanelCollapsed(false)}
+                    className="w-full bg-gray-700 hover:bg-gray-600 p-2 rounded-lg transition-colors"
+                    title="Expand Monte Carlo & AI"
+                  >
+                    <TrendingUp className="h-4 w-4 text-yellow-500 mx-auto" />
+                  </button>
+                </div>
+              ) : (
+                <div className="p-3 h-full flex flex-col">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-bold flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4 text-yellow-500" />
+                      Monte Carlo & AI
+                      {fastMode && (
+                        <span className="text-xs bg-green-600 px-1 py-0.5 rounded">
+                          FAST
+                        </span>
+                      )}
+                    </h3>
+                    <button
+                      onClick={() => setRightPanelCollapsed(true)}
+                      className="text-gray-400 hover:text-white transition-colors"
+                      title="Collapse"
+                    >
+                      ▶
+                    </button>
+                  </div>
+
+                  <div className="flex-1 overflow-auto">
+                    {isSimulating && (
+                      <div className="flex flex-col items-center justify-center py-4">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-yellow-500 mb-2"></div>
+                        <span className="text-gray-400 font-medium text-sm text-center">
+                          Running {fastMode ? "300" : "1,000"} simulations...
+                        </span>
+                      </div>
+                    )}
+
+                    {simulationResult && !isSimulating && !simulationError && (
+                      <div className="space-y-2 mb-4">
+                        <ProgressBar
+                          label="Win"
+                          value={simulationResult.win}
+                          color="bg-gradient-to-r from-green-600 to-green-500"
+                          icon={<span className="text-green-400">🏆</span>}
+                        />
+                        <ProgressBar
+                          label="Tie"
+                          value={simulationResult.tie}
+                          color="bg-gradient-to-r from-blue-600 to-blue-500"
+                          icon={<span className="text-blue-400">🤝</span>}
+                        />
+                        <ProgressBar
+                          label="Lose"
+                          value={simulationResult.lose}
+                          color="bg-gradient-to-r from-red-600 to-red-500"
+                          icon={<span className="text-red-400">💔</span>}
+                        />
+
+                        <div className="pt-2 border-t border-gray-600">
+                          <div className="text-xs text-gray-400 text-center">
+                            {simulationResult.iterations.toLocaleString()}{" "}
+                            iterations
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {simulationError && (
+                      <div className="text-center py-4 text-red-400 mb-4">
+                        <div className="text-xl mb-2">⚠️</div>
+                        <p className="text-sm font-medium">Simulation Error</p>
+                        <button
+                          onClick={handleReset}
+                          className="mt-2 bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded text-sm"
+                        >
+                          Reset
+                        </button>
+                      </div>
+                    )}
+
+                    {!simulationResult &&
+                      !isSimulating &&
+                      selectedCards.length < 5 &&
+                      !simulationError && (
+                        <div className="text-center py-4 text-gray-500 mb-4">
+                          <Calculator className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                          <p className="text-sm font-medium">Select 5+ cards</p>
+                          <p className="text-sm">for simulation</p>
+                        </div>
+                      )}
+
+                    {/* AI Advisor Component */}
+                    <div className="border-t border-gray-600 pt-3">
+                      <OpenAIAdvisor
+                        selectedCards={selectedCards}
+                        simulationResult={simulationResult}
+                        gameStage={gameStage}
+                        handDescription={handDescription}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
