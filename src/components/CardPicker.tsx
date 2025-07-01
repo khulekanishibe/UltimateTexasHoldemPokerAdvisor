@@ -17,7 +17,7 @@ const gridRanks = [
  * Convert suit letter to Unicode symbol
  */
 function getSuitSymbol(suit: string): string {
-  const symbols = { h: "♥", d: "���", s: "♠", c: "♣" };
+  const symbols = { h: "♥", d: "♦", s: "♠", c: "♣" };
   return symbols[suit as keyof typeof symbols] || suit;
 }
 
