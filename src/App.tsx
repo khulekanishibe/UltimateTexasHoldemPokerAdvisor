@@ -1163,8 +1163,8 @@ export default function App() {
                                       bg-white hover:bg-gray-50
                                       ${
                                         isHoleCard
-                                          ? "border-blue-500 text-blue-700 hover:border-blue-600"
-                                          : "border-green-500 text-green-700 hover:border-green-600"
+                                          ? "border-blue-500 hover:border-blue-600"
+                                          : "border-green-500 hover:border-green-600"
                                       }
                                       ${suit === "h" || suit === "d" ? "text-red-600" : "text-black"}
                                       ${isAce ? "ring-2 ring-yellow-400" : ""}
