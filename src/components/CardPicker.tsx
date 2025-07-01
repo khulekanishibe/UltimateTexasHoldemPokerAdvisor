@@ -59,6 +59,7 @@ interface CardPickerProps {
 export default function CardPicker({
   onSelect,
   selectedCards = [],
+  hideSelectedDisplay = false,
 }: CardPickerProps) {
   const [selected, setSelected] = useState<Card[]>(selectedCards);
 
