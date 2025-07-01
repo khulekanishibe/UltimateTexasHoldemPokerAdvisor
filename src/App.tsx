@@ -1003,10 +1003,11 @@ export default function App() {
                     {selectedCards.length}/7
                   </div>
                 </div>
-                <div className="h-[calc(100%-2rem)] overflow-auto">
+                <div className="h-[calc(100%-2rem)]">
                   <CardPicker
                     onSelect={setSelectedCards}
                     selectedCards={selectedCards}
+                    hideSelectedDisplay={true}
                   />
                 </div>
               </div>
