@@ -1158,14 +1158,16 @@ export default function App() {
                                       setSelectedCards(newSelection);
                                     }}
                                     className={`
-                                      px-2 py-1 rounded text-xs font-bold border transition-all duration-200
+                                      px-2 py-1 rounded text-xs font-bold border-2 transition-all duration-200
                                       hover:scale-105 active:scale-95 cursor-pointer
+                                      bg-white hover:bg-gray-50
                                       ${
                                         isHoleCard
-                                          ? "bg-blue-600 border-blue-400 text-white hover:bg-blue-700"
-                                          : "bg-green-600 border-green-400 text-white hover:bg-green-700"
+                                          ? "border-blue-500 text-blue-700 hover:border-blue-600"
+                                          : "border-green-500 text-green-700 hover:border-green-600"
                                       }
-                                      ${isAce ? "ring-1 ring-yellow-400" : ""}
+                                      ${suit === "h" || suit === "d" ? "text-red-600" : "text-black"}
+                                      ${isAce ? "ring-2 ring-yellow-400" : ""}
                                     `}
                                     title={`Remove ${rank}${suitSymbol}`}
                                   >
