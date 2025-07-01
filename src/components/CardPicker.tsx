@@ -17,7 +17,7 @@ const gridRanks = [
  * Convert suit letter to Unicode symbol
  */
 function getSuitSymbol(suit: string): string {
-  const symbols = { h: "♥", d: "♦", s: "♠", c: "♣" };
+  const symbols = { h: "♥", d: "���", s: "♠", c: "♣" };
   return symbols[suit as keyof typeof symbols] || suit;
 }
 
@@ -201,7 +201,7 @@ export default function CardPicker({
       </div>
 
       {/* Selected cards display */}
-      {selected.length > 0 && (
+      {!hideSelectedDisplay && selected.length > 0 && (
         <div className="mb-3 p-3 bg-gray-700/30 rounded-lg border border-gray-600">
           <p className="text-xs font-medium text-gray-300 mb-2 text-center">
             Selected Cards
