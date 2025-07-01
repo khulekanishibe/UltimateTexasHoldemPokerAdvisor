@@ -342,6 +342,7 @@ export default function App() {
                 <CardPicker
                   onSelect={setSelectedCards}
                   selectedCards={selectedCards}
+                  hideSelectedDisplay={true}
                 />
               </div>
             </div>
