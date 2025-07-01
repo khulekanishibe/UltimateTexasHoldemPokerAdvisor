@@ -379,18 +379,15 @@ Provide your recommendation in JSON format with these exact fields:
             </div>
           )}
 
-          {needsApiKey && !isLoading && (
-            <div className="p-2 rounded-lg border border-yellow-500 bg-yellow-900/20 text-yellow-400 mb-2">
+          {needsApiKey && !isLoading && !aiAdvice && (
+            <div className="p-2 rounded-lg border border-gray-600 bg-gray-700/20 text-gray-400 mb-2">
               <div className="flex items-center gap-1 mb-1">
                 <Key className="h-3 w-3" />
-                <p className="text-xs font-bold">OpenAI Setup Required</p>
+                <p className="text-xs font-bold">OpenAI Not Configured</p>
               </div>
-              <p className="text-xs opacity-90 mb-2">
-                Add your OpenAI API key to the .env file to enable AI advice
+              <p className="text-xs opacity-90">
+                Using advanced game theory algorithms instead
               </p>
-              <div className="text-xs bg-gray-800 p-1 rounded font-mono">
-                OPENAI_API_KEY=sk-your-key-here
-              </div>
             </div>
           )}
 
