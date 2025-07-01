@@ -319,28 +319,201 @@ export default function App() {
       {/* Main Layout */}
       <div className="h-[calc(100vh-180px)] p-4">
         {cardPickerExpanded ? (
-          /* Full Screen Card Picker */
-          <div className="h-full bg-gray-800/90 backdrop-blur-sm rounded-xl p-6 border border-gray-700 shadow-xl">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <Calculator className="h-6 w-6 text-yellow-500" />
-                <h2 className="text-xl font-bold">Select Your Cards</h2>
-                <span className="text-sm text-gray-300">
-                  ({selectedCards.length}/7)
-                </span>
+          /* Full Screen Card Picker with Combined Side Panel */
+          <div className="h-full flex gap-4">
+            {/* Main Card Picker Area */}
+            <div className="flex-1 bg-gray-800/90 backdrop-blur-sm rounded-xl p-6 border border-gray-700 shadow-xl">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <Calculator className="h-6 w-6 text-yellow-500" />
+                  <h2 className="text-xl font-bold">Select Your Cards</h2>
+                  <span className="text-sm text-gray-300">
+                    ({selectedCards.length}/7)
+                  </span>
+                </div>
+                <button
+                  onClick={() => setCardPickerExpanded(false)}
+                  className="bg-gray-600 hover:bg-gray-500 px-4 py-2 rounded-lg text-sm transition-colors"
+                >
+                  ✕ Close
+                </button>
               </div>
-              <button
-                onClick={() => setCardPickerExpanded(false)}
-                className="bg-gray-600 hover:bg-gray-500 px-4 py-2 rounded-lg text-sm transition-colors"
-              >
-                ✕ Close
-              </button>
+              <div className="h-[calc(100%-4rem)]">
+                <CardPicker
+                  onSelect={setSelectedCards}
+                  selectedCards={selectedCards}
+                />
+              </div>
             </div>
-            <div className="h-[calc(100%-4rem)] overflow-auto">
-              <CardPicker
-                onSelect={setSelectedCards}
-                selectedCards={selectedCards}
-              />
+
+            {/* Combined Advice & Analysis Panel */}
+            <div className="w-80 bg-gray-800/90 backdrop-blur-sm rounded-xl p-4 border border-gray-700 shadow-xl flex flex-col">
+              {/* Betting Advice Section */}
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-lg font-bold flex items-center gap-2">
+                    <Target className="h-4 w-4 text-yellow-500" />
+                    Betting Advice
+                    {advice.confidence === "high" && !isSimulating && (
+                      <Zap className="h-3 w-3 text-yellow-400" />
+                    )}
+                    {isSimulating && (
+                      <Clock className="h-3 w-3 text-blue-400 animate-spin" />
+                    )}
+                  </h2>
+
+                  {/* Fast Mode Toggle */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-400">Fast</span>
+                    <button
+                      onClick={() => setFastMode(!fastMode)}
+                      disabled={isSimulating}
+                      className={`relative inline-flex h-4 w-8 items-center rounded-full transition-colors ${
+                        fastMode ? "bg-green-600" : "bg-gray-600"
+                      } ${isSimulating ? "opacity-50 cursor-not-allowed" : ""}`}
+                    >
+                      <span
+                        className={`inline-block h-2 w-2 transform rounded-full bg-white transition-transform ${
+                          fastMode ? "translate-x-5" : "translate-x-1"
+                        }`}
+                      />
+                    </button>
+                  </div>
+                </div>
+
+                <div
+                  className={`p-3 rounded-xl border-2 ${getAdviceStyle(advice)} shadow-lg mb-3`}
+                >
+                  <p className="text-base font-bold text-center mb-1">
+                    {advice.action}
+                  </p>
+                  <p className="text-center text-xs opacity-90 mb-2">
+                    {advice.reasoning}
+                  </p>
+                  <div className="flex justify-center items-center gap-2 text-xs flex-wrap">
+                    <span
+                      className={`px-2 py-1 rounded ${
+                        advice.confidence === "high"
+                          ? "bg-green-600"
+                          : advice.confidence === "medium"
+                            ? "bg-yellow-600"
+                            : "bg-gray-600"
+                      }`}
+                    >
+                      {advice.confidence.toUpperCase()}
+                    </span>
+                    <span className="px-2 py-1 rounded bg-gray-700">
+                      {advice.stage.toUpperCase()}
+                    </span>
+                    {isSimulating && (
+                      <span className="px-2 py-1 rounded bg-blue-600 animate-pulse">
+                        CALCULATING
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Error Display */}
+                {simulationError && (
+                  <div className="mt-2 p-2 bg-red-900/20 border border-red-500 rounded-lg">
+                    <p className="text-xs text-red-400 font-medium">
+                      ⚠️ Error: {simulationError}
+                    </p>
+                    <button
+                      onClick={handleReset}
+                      className="mt-1 bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded text-xs"
+                    >
+                      Reset
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Monte Carlo & AI Section */}
+              <div className="flex-1 border-t border-gray-600 pt-4">
+                <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-yellow-500" />
+                  Monte Carlo & AI
+                  {fastMode && (
+                    <span className="text-xs bg-green-600 px-1 py-0.5 rounded">
+                      FAST
+                    </span>
+                  )}
+                </h3>
+
+                {isSimulating && (
+                  <div className="flex flex-col items-center justify-center py-6">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-500 mb-3"></div>
+                    <span className="text-gray-400 font-medium text-sm text-center">
+                      Running {fastMode ? "300" : "1,000"} simulations...
+                    </span>
+                  </div>
+                )}
+
+                {simulationResult && !isSimulating && !simulationError && (
+                  <div className="space-y-2 mb-4">
+                    <ProgressBar
+                      label="Win"
+                      value={simulationResult.win}
+                      color="bg-gradient-to-r from-green-600 to-green-500"
+                      icon={<span className="text-green-400">🏆</span>}
+                    />
+                    <ProgressBar
+                      label="Tie"
+                      value={simulationResult.tie}
+                      color="bg-gradient-to-r from-blue-600 to-blue-500"
+                      icon={<span className="text-blue-400">🤝</span>}
+                    />
+                    <ProgressBar
+                      label="Lose"
+                      value={simulationResult.lose}
+                      color="bg-gradient-to-r from-red-600 to-red-500"
+                      icon={<span className="text-red-400">💔</span>}
+                    />
+
+                    <div className="pt-2 border-t border-gray-600">
+                      <div className="text-xs text-gray-400 text-center">
+                        {simulationResult.iterations.toLocaleString()}{" "}
+                        iterations
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {simulationError && (
+                  <div className="text-center py-6 text-red-400 mb-4">
+                    <div className="text-2xl mb-2">⚠️</div>
+                    <p className="text-sm font-medium">Simulation Error</p>
+                    <button
+                      onClick={handleReset}
+                      className="mt-2 bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm"
+                    >
+                      Reset
+                    </button>
+                  </div>
+                )}
+
+                {!simulationResult &&
+                  !isSimulating &&
+                  selectedCards.length < 5 &&
+                  !simulationError && (
+                    <div className="text-center py-6 text-gray-500 mb-4">
+                      <Calculator className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                      <p className="text-sm font-medium">Select 5+ cards</p>
+                      <p className="text-sm">for simulation</p>
+                    </div>
+                  )}
+
+                {/* AI Advisor Component */}
+                <div className="border-t border-gray-600 pt-3 mt-4">
+                  <OpenAIAdvisor
+                    selectedCards={selectedCards}
+                    simulationResult={simulationResult}
+                    gameStage={gameStage}
+                    handDescription={handDescription}
+                  />
+                </div>
+              </div>
             </div>
           </div>
         ) : layoutMode === "stacked" ? (
