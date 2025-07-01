@@ -1115,7 +1115,7 @@ export default function App() {
                       )}
 
                     {/* AI Advisor Component */}
-                    <div className="border-t border-gray-600 pt-3">
+                    <div className="border-t border-gray-600 pt-3 mb-4">
                       <OpenAIAdvisor
                         selectedCards={selectedCards}
                         simulationResult={simulationResult}
@@ -1123,6 +1123,98 @@ export default function App() {
                         handDescription={handDescription}
                       />
                     </div>
+
+                    {/* Selected Cards Section */}
+                    {selectedCards.length > 0 && (
+                      <div className="border-t border-gray-600 pt-3">
+                        <h4 className="text-sm font-bold mb-3 flex items-center gap-2">
+                          <span className="text-blue-400">🃏</span>
+                          Selected Cards
+                        </h4>
+                        <div className="space-y-3">
+                          {/* Cards Display */}
+                          <div className="bg-gray-700/30 rounded-lg p-3 border border-gray-600">
+                            <div className="text-xs text-gray-400 mb-2">
+                              {selectedCards.length}/7 cards selected
+                            </div>
+                            <div className="grid grid-cols-3 gap-2">
+                              {selectedCards.map((card, index) => {
+                                const rank = card.slice(0, -1);
+                                const suit = card.slice(-1);
+                                const suitSymbol =
+                                  { h: "♥", d: "♦", s: "♠", c: "♣" }[
+                                    suit
+                                  ] || suit;
+                                const isHoleCard = index < 2;
+                                const isAce = rank === "A";
+
+                                return (
+                                  <button
+                                    key={card}
+                                    onClick={() => {
+                                      const newSelection = selectedCards.filter(
+                                        (c) => c !== card,
+                                      );
+                                      setSelectedCards(newSelection);
+                                    }}
+                                    className={`
+                                      px-2 py-1 rounded text-xs font-bold border transition-all duration-200
+                                      hover:scale-105 active:scale-95 cursor-pointer
+                                      ${
+                                        isHoleCard
+                                          ? "bg-blue-600 border-blue-400 text-white hover:bg-blue-700"
+                                          : "bg-green-600 border-green-400 text-white hover:bg-green-700"
+                                      }
+                                      ${isAce ? "ring-1 ring-yellow-400" : ""}
+                                    `}
+                                    title={`Remove ${rank}${suitSymbol}`}
+                                  >
+                                    {rank}
+                                    {suitSymbol}
+                                  </button>
+                                );
+                              })}
+                            </div>
+
+                            {/* Legend */}
+                            <div className="mt-2 flex justify-center gap-3 text-xs text-gray-400">
+                              <span className="flex items-center gap-1">
+                                <span className="w-2 h-2 bg-blue-600 rounded"></span>
+                                Hole
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <span className="w-2 h-2 bg-green-600 rounded"></span>
+                                Community
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Quick Actions */}
+                          <div className="flex gap-2">
+                            <button
+                              onClick={handleReset}
+                              className="flex-1 bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded text-xs transition-colors"
+                            >
+                              Clear All
+                            </button>
+                            {selectedCards.length >= 2 && (
+                              <button
+                                onClick={() => {
+                                  const newSelection = selectedCards.slice(
+                                    0,
+                                    2,
+                                  );
+                                  setSelectedCards(newSelection);
+                                }}
+                                className="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white px-2 py-1 rounded text-xs transition-colors"
+                              >
+                                Keep Hole
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
