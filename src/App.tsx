@@ -26,7 +26,7 @@ import {
   quickSimulation,
   type SimulationResult,
 } from "./utils/monteCarlo";
-import OpenAIAdvisor from "./components/OpenAIAdvisor";
+import GeminiAdvisor from "./components/GeminiAdvisor";
 
 /**
  * Ultimate Texas Hold'em Poker Advisor with OpenAI Integration
@@ -507,7 +507,7 @@ export default function App() {
 
                 {/* AI Advisor Component */}
                 <div className="border-t border-gray-600 pt-3 mt-4">
-                  <OpenAIAdvisor
+                  <GeminiAdvisor
                     selectedCards={selectedCards}
                     simulationResult={simulationResult}
                     gameStage={gameStage}
@@ -784,7 +784,7 @@ export default function App() {
 
                 {/* AI Advisor Component */}
                 <div className="border-t border-gray-600 pt-3">
-                  <OpenAIAdvisor
+                  <GeminiAdvisor
                     selectedCards={selectedCards}
                     simulationResult={simulationResult}
                     gameStage={gameStage}
@@ -1116,7 +1116,7 @@ export default function App() {
 
                     {/* AI Advisor Component */}
                     <div className="border-t border-gray-600 pt-3 mb-4">
-                      <OpenAIAdvisor
+                      <GeminiAdvisor
                         selectedCards={selectedCards}
                         simulationResult={simulationResult}
                         gameStage={gameStage}

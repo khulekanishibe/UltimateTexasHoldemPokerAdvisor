@@ -1,6 +1,6 @@
 {
   "functions": {
-    "api/openai-advice.js": {
+    "api/gemini-advice.js": {
       "runtime": "nodejs18.x"
     }
   },

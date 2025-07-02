@@ -1,6 +1,6 @@
 # Ultimate Texas Hold'em Poker Advisor
 
-A comprehensive, production-ready poker strategy web application built with React, TypeScript, and Tailwind CSS. Features Monte Carlo simulation, professional betting advice, and AI-powered strategic recommendations via OpenAI API integration.
+A comprehensive, production-ready poker strategy web application built with React, TypeScript, and Tailwind CSS. Features Monte Carlo simulation, professional betting advice, and AI-powered strategic recommendations via Gemini API integration.
 
 ## 🎯 Features
 
@@ -9,7 +9,7 @@ A comprehensive, production-ready poker strategy web application built with Reac
 - **Hand Evaluation**: Real-time poker hand analysis using `pokersolver`
 - **Monte Carlo Simulation**: 300-1000 iteration probability calculations
 - **Betting Advice**: Stage-specific recommendations (pre-flop, flop, turn, river)
-- **AI Strategic Advisor**: Advanced recommendations via OpenAI API
+- **AI Strategic Advisor**: Advanced recommendations via Gemini API
 
 ### Technical Features
 - **Responsive Design**: Mobile-first, dark poker table theme
@@ -22,7 +22,7 @@ A comprehensive, production-ready poker strategy web application built with Reac
 
 ### Prerequisites
 - Node.js 18+ 
-- OpenAI API key (for AI advisor feature)
+- Gemini API key (for AI advisor feature)
 
 ### Installation
 
@@ -34,7 +34,7 @@ npm install
 2. **Set up environment variables:**
 Create a `.env` file in the root directory:
 ```env
-OPENAI_API_KEY=your_openai_api_key_here
+GEMINI_API_KEY=your_gemini_api_key_here
 ```
 
 3. **Start development server:**
@@ -71,7 +71,7 @@ src/
 │   ├── CardPicker.tsx          # Interactive card selection
 │   ├── HandEvaluator.ts        # Poker hand analysis
 │   ├── BetAdvisor.ts          # Local betting logic
-│   └── OpenAIAdvisor.tsx      # AI-powered advice
+│   └── GeminiAdvisor.tsx      # AI-powered advice
 ├── utils/
 │   └── monteCarlo.ts          # Simulation algorithms
 └── App.tsx                    # Main application
@@ -81,17 +81,17 @@ src/
 - **React 18** with TypeScript for type safety
 - **Tailwind CSS** for responsive styling
 - **pokersolver** for accurate hand evaluation
-- **OpenAI API** for advanced strategic advice
+- **Gemini API** for advanced strategic advice
 - **Vite** for fast development and building
 
 ## 🤖 AI Integration
 
-### OpenAI API Setup
-The AI advisor requires an OpenAI API key to provide advanced strategic recommendations.
+### Gemini API Setup
+The AI advisor requires a Gemini API key to provide advanced strategic recommendations.
 
-1. **Get API Key**: Sign up at [OpenAI Platform](https://platform.openai.com/)
-2. **Set Environment Variable**: Add `OPENAI_API_KEY` to your `.env` file
-3. **API Endpoint**: The app uses `/api/openai-advice` to securely call OpenAI
+1. **Get API Key**: Sign up at [Google AI Studio](https://aistudio.google.com/)
+2. **Set Environment Variable**: Add `GEMINI_API_KEY` to your `.env` file
+3. **API Endpoint**: The app uses `/api/gemini-advice` to securely call Gemini
 
 ### AI Features
 - **Context-Aware Analysis**: Considers hand strength, odds, and game stage
@@ -133,10 +133,9 @@ The AI advisor requires an OpenAI API key to provide advanced strategic recommen
 ### Environment Variables
 ```env
 # Required for AI advisor
-OPENAI_API_KEY=sk-your-openai-api-key
+GEMINI_API_KEY=your_gemini_api_key
 
-# Optional: API endpoint override
-OPENAI_API_URL=https://api.openai.com/v1/chat/completions
+
 ```
 
 ### Build Configuration
@@ -183,7 +182,7 @@ The application is optimized for deployment on the Bolt platform with:
 ## 🔒 Security
 
 ### API Key Protection
-- OpenAI API key stored securely in environment variables
+- Gemini API key stored securely in environment variables
 - No client-side exposure of sensitive credentials
 - Server-side API calls only
 
@@ -230,7 +229,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## 🙏 Acknowledgments
 
 - **pokersolver**: Accurate poker hand evaluation
-- **OpenAI**: Advanced AI strategic advice
+- **Gemini**: Advanced AI strategic advice
 - **Tailwind CSS**: Beautiful, responsive styling
 - **React Team**: Excellent development framework
 - **Vite**: Fast build tooling

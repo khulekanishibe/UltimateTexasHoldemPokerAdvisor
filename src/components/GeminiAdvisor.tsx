@@ -15,7 +15,7 @@ import type { GameStage } from "./BetAdvisor";
 /**
  * OpenAI Advisor Props Interface
  */
-interface OpenAIAdvisorProps {
+interface GeminiAdvisorProps {
   selectedCards: string[];
   simulationResult: SimulationResult | null;
   gameStage: GameStage;
@@ -141,12 +141,12 @@ function generateFallbackAdvice(
  * Provides advanced poker strategy advice using OpenAI API with
  * sophisticated fallback logic based on game theory and simulation results.
  */
-export default function OpenAIAdvisor({
+export default function GeminiAdvisor({
   selectedCards,
   simulationResult,
   gameStage,
   handDescription,
-}: OpenAIAdvisorProps) {
+}: GeminiAdvisorProps) {
   const [aiAdvice, setAiAdvice] = useState<AIAdvice | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [usingFallback, setUsingFallback] = useState(false);
@@ -214,7 +214,7 @@ Provide your recommendation in JSON format with these exact fields:
 
     // First try OpenAI API
     try {
-      console.log("🤖 Attempting OpenAI API request...");
+      console.log("🤖 Attempting Gemini API request...");
 
       const prompt = generatePrompt();
 
@@ -222,7 +222,7 @@ Provide your recommendation in JSON format with these exact fields:
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
-      const response = await fetch("/api/openai-advice", {
+      const response = await fetch("/api/gemini-advice", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -239,7 +239,7 @@ Provide your recommendation in JSON format with these exact fields:
         // Only update if this request is still current
         if (currentRequestRef.current === thisRequest) {
           if (data.success && data.advice) {
-            console.log("✅ OpenAI API successful:", data.advice);
+            console.log("✅ Gemini API successful:", data.advice);
             setAiAdvice(data.advice);
             setIsLoading(false);
             setApiError(null);
@@ -266,7 +266,7 @@ Provide your recommendation in JSON format with these exact fields:
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
-      console.log("⚠️ OpenAI API failed, using fallback:", errorMessage);
+      console.log("⚠️ Gemini API failed, using fallback:", errorMessage);
 
       // Only proceed with fallback if this request is still current
       if (currentRequestRef.current === thisRequest) {
@@ -383,7 +383,7 @@ Provide your recommendation in JSON format with these exact fields:
             <div className="p-2 rounded-lg border border-gray-600 bg-gray-700/20 text-gray-400 mb-2">
               <div className="flex items-center gap-1 mb-1">
                 <Key className="h-3 w-3" />
-                <p className="text-xs font-bold">OpenAI Not Configured</p>
+                <p className="text-xs font-bold">Gemini Not Configured</p>
               </div>
               <p className="text-xs opacity-90">
                 Using advanced game theory algorithms instead
@@ -442,7 +442,7 @@ Provide your recommendation in JSON format with these exact fields:
                 {!usingFallback && !apiError && (
                   <p className="text-xs text-green-400 italic flex items-center gap-1">
                     <Zap className="h-2 w-2" />
-                    Powered by OpenAI
+                    Powered by Gemini
                   </p>
                 )}
               </div>
